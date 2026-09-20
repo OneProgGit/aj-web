@@ -1,0 +1,8 @@
+[application]
+name = "aj-web"
+default_platform = "web"
+out_dir = "dist"
+
+[web]
+app_id = 0
+base_path = "/"

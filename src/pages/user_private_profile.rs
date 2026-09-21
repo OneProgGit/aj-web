@@ -167,6 +167,8 @@ pub fn UserPrivateProfile(user_id: i64) -> Element {
                                             STATE.write().token = None;
                                             crate::state::clear_token();
                                             nav.push(crate::Route::Welcome {});
+                                        } else {
+                                            nav.push(crate::Route::Users {});
                                         }
                                     }
                                     Err(e) => show_alert(AlertKind::Error, e),

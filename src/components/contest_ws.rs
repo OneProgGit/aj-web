@@ -211,8 +211,8 @@ async fn handle_event(_contest_id: i64, event: ContestEvent) {
         )),
         ContestEvent::ProblemDeleted(idx) => Some(i18n::tr(
             &lang,
-            &format!("Задача #{} удалена", idx + 1),
-            &format!("Problem #{} deleted", idx + 1),
+            &format!("Задача #{} удалена", idx),
+            &format!("Problem #{} deleted", idx),
         )),
         ContestEvent::NewProblemQuestion(q) => Some(i18n::tr(
             &lang,

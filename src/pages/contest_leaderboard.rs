@@ -87,7 +87,22 @@ pub fn ContestLeaderboard(contest_id: i64) -> Element {
             fields.push(row.total_score.to_string());
             table.push(fields);
         }
-        if fmt == "html" {
+        if fmt == "md" {
+            let esc_md = |s: &str| s.replace('|', "\\|");
+            let mut md = String::new();
+            md.push_str(&format!(
+                "| {} |\n|{}|\n",
+                header.iter().map(|h| esc_md(h)).collect::<Vec<_>>().join(" | "),
+                header.iter().map(|_| "---").collect::<Vec<_>>().join("|"),
+            ));
+            for row in &table {
+                md.push_str(&format!(
+                    "| {} |\n",
+                    row.iter().map(|c| esc_md(c)).collect::<Vec<_>>().join(" | "),
+                ));
+            }
+            crate::api::trigger_download(md.into_bytes(), "leaderboard.md");
+        } else if fmt == "html" {
             let mut doc = String::from(
                 "<!DOCTYPE html><html><head><meta charset=\"utf-8\"><title>Leaderboard</title><style>table{border-collapse:collapse}th,td{border:1px solid #999;padding:4px 8px;text-align:center}</style></head><body><table><thead><tr>",
             );
@@ -137,6 +152,15 @@ pub fn ContestLeaderboard(contest_id: i64) -> Element {
                                         move |_| export("csv")
                                     },
                                     "CSV"
+                                }
+                            }
+                            li {
+                                button {
+                                    onclick: {
+                                        let export = export.clone();
+                                        move |_| export("md")
+                                    },
+                                    "MD"
                                 }
                             }
                             li {

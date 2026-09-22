@@ -23,29 +23,22 @@ fn upsert_contest(list: &mut Vec<crate::models::contests::PublicContestConfig>, 
     list.insert(pos, fresh);
 }
 
-/// Полный GET контеста. На 403 (скрыли/исключили) — выкидываем из списка,
-/// отписываемся и больше не ретраим этот контест.
-async fn refresh_contest(id: i64) {
+/// Полный GET контеста. Возвращает true, если контест виден пользователю.
+/// На 403 (скрыли/исключили) — тихо выкидываем из списка и отписываемся,
+/// без уведомлений: для нас контест просто исчез.
+async fn refresh_contest(id: i64) -> bool {
     let token = crate::state::token();
     match crate::api::contests::get_contest(id, &token).await {
         Ok(fresh) => {
             upsert_contest(&mut STATE.write().contests, fresh);
+            true
         }
         Err(e) => {
             if e.contains("Forbidden") || e.contains("Доступ запрещён") {
-                let mut state = STATE.write();
-                state.contests.retain(|c| c.id != id);
-                drop(state);
+                STATE.write().contests.retain(|c| c.id != id);
                 crate::state::WS_SUBSCRIBED.write().remove(&id);
-                show_alert(
-                    AlertKind::Error,
-                    i18n::tr(
-                        &crate::state::language(),
-                        &format!("Нет доступа к контесту #{id}"),
-                        &format!("No access to contest #{id}"),
-                    ),
-                );
             }
+            false
         }
     }
 }
@@ -220,32 +213,46 @@ async fn handle_event(contest_id: Option<i64>, event: ContestEvent) {
             })
         }
         ContestEvent::ContestUpdated(id) => {
-            refresh_contest(*id).await;
-            Some(i18n::tr(
-                &lang,
-                &format!("Контест #{id} обновлён"),
-                &format!("Contest #{id} updated"),
-            ))
+            // Тост только если контест нам виден; скрытый тихо исчезает из списка.
+            if refresh_contest(*id).await {
+                Some(i18n::tr(
+                    &lang,
+                    &format!("Контест #{id} обновлён"),
+                    &format!("Contest #{id} updated"),
+                ))
+            } else {
+                None
+            }
         }
         ContestEvent::ContestDeleted(id) => {
-            STATE.write().contests.retain(|c| c.id != *id);
+            // Тост только если контест был у нас в списке; чужой/скрытый — тихо.
+            let mut state = STATE.write();
+            let had = state.contests.iter().any(|c| c.id == *id);
+            state.contests.retain(|c| c.id != *id);
+            drop(state);
             crate::state::WS_SUBSCRIBED.write().remove(id);
-            Some(i18n::tr(
-                &lang,
-                &format!("Контест #{id} удалён"),
-                &format!("Contest #{id} deleted"),
-            ))
+            had.then(|| {
+                i18n::tr(
+                    &lang,
+                    &format!("Контест #{id} удалён"),
+                    &format!("Contest #{id} deleted"),
+                )
+            })
         }
         ContestEvent::NewContest(id) => {
+            // Тост только если контест нам виден (скрытый от нас — тихо).
             let token = crate::state::token();
-            if let Ok(fresh) = crate::api::contests::get_contest(*id, &token).await {
-                upsert_contest(&mut STATE.write().contests, fresh);
+            match crate::api::contests::get_contest(*id, &token).await {
+                Ok(fresh) => {
+                    upsert_contest(&mut STATE.write().contests, fresh);
+                    Some(i18n::tr(
+                        &lang,
+                        &format!("Контест #{id} создан"),
+                        &format!("Contest #{id} created"),
+                    ))
+                }
+                Err(_) => None,
             }
-            Some(i18n::tr(
-                &lang,
-                &format!("Контест #{id} создан"),
-                &format!("Contest #{id} created"),
-            ))
         }
         ContestEvent::NewProblem(id) => {
             if let Some(cid) = contest_id {

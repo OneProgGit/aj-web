@@ -16,7 +16,6 @@ use crate::{
 #[component]
 pub fn Problems() -> Element {
     let lang = crate::state::language();
-    let navigator = use_navigator();
     let mut all_problems = use_signal(|| false);
     let mut picked = use_signal(|| None::<(String, Vec<u8>)>);
     let mut loaded = use_signal(|| false);
@@ -58,12 +57,6 @@ pub fn Problems() -> Element {
     rsx! {
         div { class: "flex flex-col gap-4 max-w-7xl mx-auto w-full",
             div { class: "flex flex-wrap gap-4 items-center",
-                button {
-                    class: "btn btn-ghost btn-sm gap-2",
-                    onclick: move |_| { let _ = navigator.push(crate::Route::Home {}); },
-                    {icon_element(Icon::Back, 16)}
-                    span { "{i18n::tr(&lang, \"назад\", \"back\")}" }
-                }
                 h1 { class: "text-2xl font-bold", "{i18n::tr(&lang, \"Задачи\", \"Problems\")}" }
 
                 label { class: "btn btn-ghost btn-sm gap-1",

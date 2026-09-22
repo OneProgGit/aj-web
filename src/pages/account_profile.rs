@@ -34,13 +34,6 @@ pub fn Account() -> Element {
 
     rsx! {
         div { class: "flex flex-col items-start gap-4 max-w-7xl mx-auto w-full",
-            button {
-                class: "btn btn-ghost btn-sm gap-2",
-                onclick: move |_| { let _ = navigator.push(crate::Route::Home {}); },
-                {icon_element(Icon::Back, 16)}
-                span { "{i18n::tr(&lang, \"назад\", \"back\")}" }
-            }
-
             h1 { class: "text-2xl font-bold", "{i18n::tr(&lang, \"Профиль\", \"Profile\")}" }
 
             div { class: "card w-full max-w-3xl bg-base-200 shadow-lg overflow-hidden",

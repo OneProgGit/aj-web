@@ -5,7 +5,6 @@ use crate::{alerts::show_alert, api, components::user_card::UserCard, i18n, stat
 #[component]
 pub fn Users() -> Element {
     let lang = crate::state::language();
-    let navigator = use_navigator();
     let mut loaded = use_signal(|| false);
 
     if !*loaded.read() {
@@ -22,12 +21,6 @@ pub fn Users() -> Element {
     rsx! {
         div { class: "flex flex-col gap-4 max-w-7xl mx-auto w-full",
             div { class: "flex flex-wrap gap-4 items-center",
-                button {
-                    class: "btn btn-ghost btn-sm gap-2",
-                    onclick: move |_| { let _ = navigator.push(crate::Route::Home {}); },
-                    {crate::components::icon::icon_element(crate::components::icon::Icon::Back, 16)}
-                    span { "{i18n::tr(&lang, \"назад\", \"back\")}" }
-                }
                 h1 { class: "text-2xl font-bold", "{i18n::tr(&lang, \"Пользователи\", \"Users\")}" }
             }
 

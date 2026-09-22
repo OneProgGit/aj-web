@@ -7,30 +7,78 @@ use wasm_bindgen_futures::spawn_local;
 use crate::{
     alerts::{show_alert, AlertKind},
     i18n,
-    models::contests::{ContestEvent, PublicContestConfig},
+    models::contests::ContestEvent,
     state::STATE,
 };
 
-/// Полный GET контеста с фолбэком на данные события.
-async fn refresh_contest(id: i64, contest: PublicContestConfig) {
+/// Вставка/замена с сохранением серверного порядка (`c.id desc`):
+/// существующий — заменяется на месте (id неизменен, порядок цел),
+/// отсутствующий (новый, отжатый "скрыть") — встаёт по своему id.
+fn upsert_contest(list: &mut Vec<crate::models::contests::PublicContestConfig>, fresh: crate::models::contests::PublicContestConfig) {
+    if let Some(slot) = list.iter_mut().find(|c| c.id == fresh.id) {
+        *slot = fresh;
+        return;
+    }
+    let pos = list.iter().position(|c| fresh.id > c.id).unwrap_or(list.len());
+    list.insert(pos, fresh);
+}
+
+/// Полный GET контеста. На 403 (скрыли/исключили) — выкидываем из списка,
+/// отписываемся и больше не ретраим этот контест.
+async fn refresh_contest(id: i64) {
     let token = crate::state::token();
     match crate::api::contests::get_contest(id, &token).await {
         Ok(fresh) => {
-            let mut state = STATE.write();
-            if let Some(slot) = state.contests.iter_mut().find(|c| c.id == id) {
-                *slot = fresh;
-            } else {
-                state.contests.push(fresh);
+            upsert_contest(&mut STATE.write().contests, fresh);
+        }
+        Err(e) => {
+            if e.contains("Forbidden") || e.contains("Доступ запрещён") {
+                let mut state = STATE.write();
+                state.contests.retain(|c| c.id != id);
+                drop(state);
+                crate::state::WS_SUBSCRIBED.write().remove(&id);
+                show_alert(
+                    AlertKind::Error,
+                    i18n::tr(
+                        &crate::state::language(),
+                        &format!("Нет доступа к контесту #{id}"),
+                        &format!("No access to contest #{id}"),
+                    ),
+                );
             }
         }
-        Err(_) => {
-            let mut state = STATE.write();
-            if let Some(slot) = state.contests.iter_mut().find(|c| c.id == id) {
-                *slot = contest;
-            } else {
-                state.contests.push(contest);
-            }
-        }
+    }
+}
+
+async fn reload_posts(contest_id: i64) {
+    let token = crate::state::token();
+    if let Ok(posts) = crate::api::contests::get_contest_posts(contest_id, &token).await {
+        STATE.write().posts = posts;
+    }
+}
+
+async fn reload_problems(contest_id: i64) {
+    let token = crate::state::token();
+    if let Ok(list) = crate::api::problems::get_contest_problems(contest_id, &token).await {
+        STATE.write().contest_problems = list;
+    }
+}
+
+async fn reload_questions(contest_id: i64) {
+    let token = crate::state::token();
+    let can_manage = STATE
+        .read()
+        .contests
+        .iter()
+        .find(|c| c.id == contest_id)
+        .is_some_and(|c| STATE.read().can_manage_contest(c));
+    let res = if can_manage {
+        crate::api::contests::get_contest_questions_all(contest_id, &token).await
+    } else {
+        crate::api::contests::get_contest_questions_my(contest_id, &token).await
+    };
+    if let Ok(questions) = res {
+        STATE.write().questions = questions;
     }
 }
 
@@ -53,7 +101,7 @@ pub fn contest_ws(contest_id: i64) {
                 break;
             }
             ws_loop(&ws_url(&format!("/contests/{contest_id}/ws")), |event| {
-                handle_event(contest_id, event)
+                handle_event(Some(contest_id), event)
             })
             .await;
             gloo_timers::future::TimeoutFuture::new(WS_RETRY_MS).await;
@@ -94,10 +142,7 @@ fn ws_url(path: &str) -> String {
         .trim_start_matches("https://")
         .trim_start_matches("http://")
         .trim_end_matches('/');
-    let mut url = format!("{scheme}://{host_port}{path}");
-    if let Some(token) = crate::state::token() {
-        url.push_str(&format!("?token={token}"));
-    }
+    let url = format!("{scheme}://{host_port}{path}");
     url
 }
 
@@ -131,162 +176,150 @@ where
 }
 
 async fn handle_feed_event(event: ContestEvent) {
-    let lang = crate::state::language();
-    match event {
-        ContestEvent::NewContest(contest) => {
-            let id = contest.id;
-            let mut state = STATE.write();
-            if !state.contests.iter().any(|c| c.id == id) {
-                state.contests.insert(0, contest);
-                show_alert(
-                    AlertKind::Info,
-                    i18n::tr(
-                        &lang,
-                        &format!("Контест #{id} создан"),
-                        &format!("Contest #{id} created"),
-                    ),
-                );
-            }
-        }
-        ContestEvent::ContestUpdated(contest) => {
-            refresh_contest(contest.id, contest).await;
-        }
-        ContestEvent::ContestDeleted(id) => {
-            STATE.write().contests.retain(|c| c.id != id);
-            show_alert(
-                AlertKind::Info,
-                i18n::tr(
-                    &lang,
-                    &format!("Контест #{id} удалён"),
-                    &format!("Contest #{id} deleted"),
-                ),
-            );
-        }
-        _ => {}
-    }
+    handle_event(None, event).await;
 }
 
-async fn handle_event(_contest_id: i64, event: ContestEvent) {
+async fn handle_event(contest_id: Option<i64>, event: ContestEvent) {
     let lang = crate::state::language();
+    // В фиде (контекста контеста нет) — только членство списка.
     let notice = match &event {
-        ContestEvent::NewPost(post) => Some(i18n::tr(
-            &lang,
-            &format!("Новое объявление #{}", post.id),
-            &format!("New announcement #{}", post.id),
-        )),
-        ContestEvent::PostUpdated(post) => Some(i18n::tr(
-            &lang,
-            &format!("Объявление #{} обновлено", post.id),
-            &format!("Announcement #{} updated", post.id),
-        )),
-        ContestEvent::PostDeleted(idx) => Some(i18n::tr(
-            &lang,
-            &format!("Объявление #{} удалено", idx),
-            &format!("Announcement #{} deleted", idx),
-        )),
-        ContestEvent::ContestUpdated(contest) => Some(i18n::tr(
-            &lang,
-            &format!("Контест #{} обновлён", contest.id),
-            &format!("Contest #{} updated", contest.id),
-        )),
-        ContestEvent::ContestDeleted(id) => Some(i18n::tr(
-            &lang,
-            &format!("Контест #{id} удалён"),
-            &format!("Contest #{id} deleted"),
-        )),
-        ContestEvent::NewContest(contest) => Some(i18n::tr(
-            &lang,
-            &format!("Контест #{} создан", contest.id),
-            &format!("Contest #{} created", contest.id),
-        )),
-        ContestEvent::NewProblem(problem) => Some(i18n::tr(
-            &lang,
-            &format!("Новая задача #{}", problem.index + 1),
-            &format!("New problem #{}", problem.index + 1),
-        )),
-        ContestEvent::ProblemUpdated(problem) => Some(i18n::tr(
-            &lang,
-            &format!("Задача #{} обновлена", problem.index + 1),
-            &format!("Problem #{} updated", problem.index + 1),
-        )),
-        ContestEvent::ProblemDeleted(idx) => Some(i18n::tr(
-            &lang,
-            &format!("Задача #{} удалена", idx),
-            &format!("Problem #{} deleted", idx),
-        )),
-        ContestEvent::NewProblemQuestion(q) => Some(i18n::tr(
-            &lang,
-            &format!("Новый вопрос #{}", q.id),
-            &format!("New question #{}", q.id),
-        )),
-        ContestEvent::ProblemQuestionDeleted(idx) => Some(i18n::tr(
-            &lang,
-            &format!("Вопрос #{} удалён", idx),
-            &format!("Question #{} deleted", idx),
-        )),
-        ContestEvent::ProblemQuestionAnswered(q) => Some(i18n::tr(
-            &lang,
-            &format!("Ответ на вопрос #{}", q.id),
-            &format!("Question #{} answered", q.id),
-        )),
-    };
-    match event {
-        ContestEvent::NewPost(post) | ContestEvent::PostUpdated(post) => {
-            let mut state = STATE.write();
-            if let Some(slot) = state.posts.iter_mut().find(|p| p.id == post.id) {
-                *slot = post;
-            } else {
-                state.posts.insert(0, post);
+        ContestEvent::NewPost(id) => {
+            if let Some(cid) = contest_id {
+                reload_posts(cid).await;
             }
+            contest_id.map(|_| {
+                i18n::tr(
+                    &lang,
+                    &format!("Новое объявление #{id}"),
+                    &format!("New announcement #{id}"),
+                )
+            })
         }
-        ContestEvent::PostDeleted(idx) => {
-            STATE.write().posts.retain(|p| p.id != idx);
-        }
-        ContestEvent::NewProblem(problem) | ContestEvent::ProblemUpdated(problem) => {
-            let mut state = STATE.write();
-            if let Some(slot) = state
-                .contest_problems
-                .iter_mut()
-                .find(|p| p.id == problem.id)
-            {
-                *slot = problem;
-            } else {
-                state.contest_problems.push(problem);
+        ContestEvent::PostUpdated(id) => {
+            if let Some(cid) = contest_id {
+                reload_posts(cid).await;
             }
+            contest_id.map(|_| {
+                i18n::tr(
+                    &lang,
+                    &format!("Объявление #{id} обновлено"),
+                    &format!("Announcement #{id} updated"),
+                )
+            })
         }
-        ContestEvent::ProblemDeleted(idx) => {
-            STATE
-                .write()
-                .contest_problems
-                .retain(|p| p.id != idx);
-        }
-        ContestEvent::NewProblemQuestion(q) | ContestEvent::ProblemQuestionAnswered(q) => {
-            let mut state = STATE.write();
-            if let Some(slot) = state.questions.iter_mut().find(|x| x.id == q.id) {
-                *slot = q;
-            } else {
-                state.questions.insert(0, q);
+        ContestEvent::PostDeleted(id) => {
+            if let Some(cid) = contest_id {
+                reload_posts(cid).await;
             }
+            contest_id.map(|_| {
+                i18n::tr(
+                    &lang,
+                    &format!("Объявление #{id} удалено"),
+                    &format!("Announcement #{id} deleted"),
+                )
+            })
         }
-        ContestEvent::ProblemQuestionDeleted(idx) => {
-            STATE.write().questions.retain(|q| q.id != idx);
-        }
-        ContestEvent::ContestUpdated(contest) => {
-            // Чужое изменение (не из этого интерфейса): забираем свежий
-            // контест с сервера целиком, а не доверяем полям события.
-            refresh_contest(contest.id, contest).await;
+        ContestEvent::ContestUpdated(id) => {
+            refresh_contest(*id).await;
+            Some(i18n::tr(
+                &lang,
+                &format!("Контест #{id} обновлён"),
+                &format!("Contest #{id} updated"),
+            ))
         }
         ContestEvent::ContestDeleted(id) => {
-            STATE.write().contests.retain(|c| c.id != id);
-            crate::state::WS_SUBSCRIBED.write().remove(&id);
+            STATE.write().contests.retain(|c| c.id != *id);
+            crate::state::WS_SUBSCRIBED.write().remove(id);
+            Some(i18n::tr(
+                &lang,
+                &format!("Контест #{id} удалён"),
+                &format!("Contest #{id} deleted"),
+            ))
         }
-        ContestEvent::NewContest(contest) => {
-            let mut state = STATE.write();
-            if !state.contests.iter().any(|c| c.id == contest.id) {
-                state.contests.insert(0, contest);
+        ContestEvent::NewContest(id) => {
+            let token = crate::state::token();
+            if let Ok(fresh) = crate::api::contests::get_contest(*id, &token).await {
+                upsert_contest(&mut STATE.write().contests, fresh);
             }
+            Some(i18n::tr(
+                &lang,
+                &format!("Контест #{id} создан"),
+                &format!("Contest #{id} created"),
+            ))
         }
-    }
+        ContestEvent::NewProblem(id) => {
+            if let Some(cid) = contest_id {
+                reload_problems(cid).await;
+            }
+            contest_id.map(|_| {
+                i18n::tr(
+                    &lang,
+                    &format!("Новая задача #{id}"),
+                    &format!("New problem #{id}"),
+                )
+            })
+        }
+        ContestEvent::ProblemUpdated(id) => {
+            if let Some(cid) = contest_id {
+                reload_problems(cid).await;
+            }
+            contest_id.map(|_| {
+                i18n::tr(
+                    &lang,
+                    &format!("Задача #{id} обновлена"),
+                    &format!("Problem #{id} updated"),
+                )
+            })
+        }
+        ContestEvent::ProblemDeleted(id) => {
+            if let Some(cid) = contest_id {
+                reload_problems(cid).await;
+            }
+            contest_id.map(|_| {
+                i18n::tr(
+                    &lang,
+                    &format!("Задача #{id} удалена"),
+                    &format!("Problem #{id} deleted"),
+                )
+            })
+        }
+        ContestEvent::NewProblemQuestion(id) => {
+            if let Some(cid) = contest_id {
+                reload_questions(cid).await;
+            }
+            contest_id.map(|_| {
+                i18n::tr(
+                    &lang,
+                    &format!("Новый вопрос #{id}"),
+                    &format!("New question #{id}"),
+                )
+            })
+        }
+        ContestEvent::ProblemQuestionDeleted(id) => {
+            if let Some(cid) = contest_id {
+                reload_questions(cid).await;
+            }
+            contest_id.map(|_| {
+                i18n::tr(
+                    &lang,
+                    &format!("Вопрос #{id} удалён"),
+                    &format!("Question #{id} deleted"),
+                )
+            })
+        }
+        ContestEvent::ProblemQuestionAnswered(id) => {
+            if let Some(cid) = contest_id {
+                reload_questions(cid).await;
+            }
+            contest_id.map(|_| {
+                i18n::tr(
+                    &lang,
+                    &format!("Ответ на вопрос #{id}"),
+                    &format!("Question #{id} answered"),
+                )
+            })
+        }
+    };
     if let Some(text) = notice {
         show_alert(AlertKind::Info, text);
     }

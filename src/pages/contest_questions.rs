@@ -91,12 +91,13 @@ pub fn ContestQuestions(contest_id: i64) -> Element {
                 p { class: "italic", "{i18n::tr(&lang, \"Вопросов пока что нет\", \"No questions yet\")}" }
             } else {
                 div { class: "flex flex-col gap-4 w-full max-h-[32rem] overflow-y-auto",
-                    for (q, problem_name, can_answer, can_delete) in question_rows {
+                    for (i, (q, problem_name, can_answer, can_delete)) in question_rows.iter().enumerate() {
                         QuestionCard {
-                            question: q,
-                            problem_name,
-                            can_answer,
-                            can_delete,
+                            question: q.clone(),
+                            position: question_rows.len() - i,
+                            problem_name: problem_name.clone(),
+                            can_answer: *can_answer,
+                            can_delete: *can_delete,
                             on_changed: {
                                 move |_| {}
                             },

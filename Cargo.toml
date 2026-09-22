@@ -41,7 +41,7 @@ web-sys = { version = "0.3", features = [
 gloo-net = { version = "0.6", features = ["websocket"] }
 log = "0.4"
 console_error_panic_hook = "0.1"
-aj-models = "0.10.10"
+aj-models = "0.10.11"
 pulldown-cmark = "0.13.4"
 ammonia = "4.1.4"
 

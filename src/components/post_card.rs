@@ -21,6 +21,7 @@ use super::{
 #[derive(Props, Clone)]
 pub struct PostCardProps {
     pub post: ContestPost,
+    pub position: usize,
     pub can_manage: bool,
     pub on_changed: EventHandler<()>,
 }
@@ -28,6 +29,7 @@ pub struct PostCardProps {
 impl PartialEq for PostCardProps {
     fn eq(&self, other: &Self) -> bool {
         crate::models::props_json_eq(&self.post, &other.post)
+            && self.position == other.position
             && self.can_manage == other.can_manage
             && self.on_changed == other.on_changed
     }
@@ -36,6 +38,7 @@ impl PartialEq for PostCardProps {
 pub fn PostCard(props: PostCardProps) -> Element {
     let PostCardProps {
         post,
+        position,
         can_manage,
         on_changed,
     } = props;
@@ -65,7 +68,7 @@ pub fn PostCard(props: PostCardProps) -> Element {
                     span { class: "text-sm", "{i18n::tr(&lang, \"создано\", \"created\")}" }
                     DateTimeText { time: post.created_at, class: "text-sm italic text-right" }
                 }
-                h3 { class: "card-title", span { "#{post.index + 1} {title}" } }
+                h3 { class: "card-title", span { "#{position} {title}" } }
                 Markdown { text: text }
 
                 if can_manage {

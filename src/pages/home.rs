@@ -3,7 +3,12 @@ use dioxus::prelude::*;
 use crate::{
     alerts::{show_alert, AlertKind},
     api,
-    components::{contest_card::ContestCard, contest_form::contest_form, icon::Icon},
+    components::{
+        contest_card::ContestCard,
+        contest_form::contest_form,
+        contest_ws::contests_feed_ws,
+        icon::Icon,
+    },
     i18n,
     models::contests::ContestRequest,
     state::STATE,
@@ -21,6 +26,7 @@ async fn reload_data(
         match api::contests::get_contests(&token).await {
             Ok(list) => {
                 STATE.write().contests = list;
+                contests_feed_ws(false);
             }
             Err(e) => show_alert(AlertKind::Error, e),
         }
@@ -29,6 +35,7 @@ async fn reload_data(
         match api::contests::get_my_contests(&token).await {
             Ok(list) => {
                 STATE.write().contests = list;
+                contests_feed_ws(true);
             }
             Err(e) => show_alert(AlertKind::Error, e),
         }
@@ -171,8 +178,6 @@ pub fn Home() -> Element {
                                     match api::contests::create_contest(&request, &token).await {
                                         Ok(()) => {
                                             modal_open.set(false);
-                                            show_alert(AlertKind::Success, i18n::tr(&crate::state::language(), "Контест создан", "Contest created"));
-                                            reload_data(false, true, false, false).await;
                                         }
                                         Err(e) => show_alert(AlertKind::Error, e),
                                     }

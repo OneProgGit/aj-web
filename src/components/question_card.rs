@@ -62,6 +62,7 @@ fn answer_form(
 #[derive(Props, Clone)]
 pub struct QuestionCardProps {
     pub question: ProblemQuestion,
+    pub position: usize,
     pub problem_name: String,
     pub can_answer: bool,
     pub can_delete: bool,
@@ -71,6 +72,7 @@ pub struct QuestionCardProps {
 impl PartialEq for QuestionCardProps {
     fn eq(&self, other: &Self) -> bool {
         crate::models::props_json_eq(&self.question, &other.question)
+            && self.position == other.position
             && self.problem_name == other.problem_name
             && self.can_answer == other.can_answer
             && self.can_delete == other.can_delete
@@ -81,6 +83,7 @@ impl PartialEq for QuestionCardProps {
 pub fn QuestionCard(props: QuestionCardProps) -> Element {
     let QuestionCardProps {
         question,
+        position,
         problem_name,
         can_answer,
         can_delete,
@@ -105,7 +108,7 @@ pub fn QuestionCard(props: QuestionCardProps) -> Element {
                     span { class: "text-sm", "{i18n::tr(&lang, \"создан\", \"created\")}" }
                     DateTimeText { time: question.created_at, class: "text-sm italic text-right" }
                 }
-                h3 { class: "card-title", span { "#{question.index + 1} {question.title}" } }
+                h3 { class: "card-title", span { "#{position} {question.title}" } }
                 Markdown { text: question.text.clone() }
                 if !question.answer.is_empty() {
                     h3 { class: "card-title", span { "{i18n::tr(&lang, \"Ответ\", \"Answer\")}" } }

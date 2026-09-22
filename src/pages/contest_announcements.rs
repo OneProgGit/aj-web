@@ -43,9 +43,10 @@ pub fn ContestAnnouncements(contest_id: i64) -> Element {
                 p { class: "italic", "{i18n::tr(&lang, \"Объявлений пока что нет\", \"No announcements yet\")}" }
             } else {
                 div { class: "flex flex-col gap-4 w-full max-h-[32rem] overflow-y-auto",
-                    for post in STATE.read().posts.iter() {
+                    for (i, post) in STATE.read().posts.iter().enumerate() {
                         PostCard {
                             post: post.clone(),
+                            position: STATE.read().posts.len() - i,
                             can_manage: post.owner_id == STATE.read().user.as_ref().map(|u| u.id).unwrap_or_default() || is_owner,
                             on_changed: {
                                 move |_| {}

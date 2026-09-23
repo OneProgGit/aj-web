@@ -23,16 +23,6 @@ pub fn ContestAnnouncements(contest_id: i64) -> Element {
     let text_en = use_signal(String::new);
     let is_owner = STATE.read().is_owner();
 
-    let reload = move || {
-        let token = crate::state::token();
-        spawn(async move {
-            match api::contests::get_contest_posts(contest_id, &token).await {
-                Ok(posts) => STATE.write().posts = posts,
-                Err(e) => show_alert(AlertKind::Error, e),
-            }
-        });
-    };
-
     let valid = (!title_ru().is_empty() && !text_ru().is_empty())
         || (!title_en().is_empty() && !text_en().is_empty());
 
@@ -59,7 +49,7 @@ pub fn ContestAnnouncements(contest_id: i64) -> Element {
                             position: STATE.read().posts.len() - i,
                             can_manage: post.owner_id == STATE.read().user.as_ref().map(|u| u.id).unwrap_or_default() || is_owner,
                             on_changed: {
-                                move |_| reload()
+                                move |_| {}
                             },
                         }
                     }
@@ -117,7 +107,6 @@ pub fn ContestAnnouncements(contest_id: i64) -> Element {
                                                 match api::contests::create_contest_post(contest_id, &request, &token).await {
                                                     Ok(()) => {
                                                         modal.set(false);
-                                                        reload();
                                                     }
                                                     Err(e) => show_alert(AlertKind::Error, e),
                                                 }

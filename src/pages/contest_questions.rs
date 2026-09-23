@@ -44,22 +44,6 @@ pub fn ContestQuestions(contest_id: i64) -> Element {
             .is_some_and(|p| STATE.read().can_manage_problem(p))
     };
 
-    let reload = move || {
-        let token = crate::state::token();
-        let all = contest_owned || is_owner;
-        spawn(async move {
-            let res = if all {
-                api::contests::get_contest_questions_all(contest_id, &token).await
-            } else {
-                api::contests::get_contest_questions_my(contest_id, &token).await
-            };
-            match res {
-                Ok(questions) => STATE.write().questions = questions,
-                Err(e) => show_alert(AlertKind::Error, e),
-            }
-        });
-    };
-
     let question_rows = questions
         .iter()
         .cloned()
@@ -99,7 +83,7 @@ pub fn ContestQuestions(contest_id: i64) -> Element {
                             can_answer: *can_answer,
                             can_delete: *can_delete,
                             on_changed: {
-                                move |_| reload()
+                                move |_| {}
                             },
                         }
                     }
@@ -152,7 +136,6 @@ pub fn ContestQuestions(contest_id: i64) -> Element {
                                                 match api::contests::create_problem_question(problem.id, &request, &token).await {
                                                     Ok(()) => {
                                                         modal.set(false);
-                                                        reload();
                                                     }
                                                     Err(e) => show_alert(AlertKind::Error, e),
                                                 }

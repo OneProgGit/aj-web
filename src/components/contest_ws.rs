@@ -135,7 +135,12 @@ fn ws_url(path: &str) -> String {
         .trim_start_matches("https://")
         .trim_start_matches("http://")
         .trim_end_matches('/');
-    let url = format!("{scheme}://{host_port}{path}");
+    let mut url = format!("{scheme}://{host_port}{path}");
+    // Браузерный WebSocket не шлёт заголовки — токен отдаём query-параметром.
+    if let Some(token) = crate::state::token() {
+        url.push_str(if path.contains('?') { "&token=" } else { "?token=" });
+        url.push_str(&token);
+    }
     url
 }
 

@@ -99,7 +99,7 @@ pub fn ContestQuestions(contest_id: i64) -> Element {
                             can_answer: *can_answer,
                             can_delete: *can_delete,
                             on_changed: {
-                                move |_| {}
+                                move |_| reload()
                             },
                         }
                     }

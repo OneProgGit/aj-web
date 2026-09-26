@@ -53,7 +53,13 @@ pub fn ContestQuestions(contest_id: i64) -> Element {
                 |p| format!("#{} {}", p.index + 1, i18n::problem_title(&lang, &p.name_ru, &p.name_en)),
             );
             let can_answer = can_manage(&q);
-            let can_delete = user_id.is_some_and(|id| id == q.owner_id);
+            let can_delete = user_id.is_some_and(|id| id == q.owner_id)
+                || is_owner
+                || contest_owned
+                || problems
+                    .iter()
+                    .find(|p| p.id == q.problem_id)
+                    .is_some_and(|p| STATE.read().can_manage_problem(p));
             (q, problem_name, can_answer, can_delete)
         })
         .collect::<Vec<_>>();

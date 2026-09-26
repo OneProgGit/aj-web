@@ -216,12 +216,17 @@ pub fn Contest(contest_id: i64) -> Element {
     let mut tab = use_signal(tab_from_url);
 
     if !*loaded.read() {
-        loaded.set(true);
         STATE.write().all_submissions = false;
         spawn(async move {
             load_contest_state(contest_id, 0, false, true).await;
             crate::components::contest_ws::contest_ws(contest_id);
+            loaded.set(true);
         });
+        return rsx! {
+            div { class: "flex justify-center items-center py-16",
+                span { class: "loading loading-spinner loading-lg" }
+            }
+        };
     }
 
     let contest = STATE

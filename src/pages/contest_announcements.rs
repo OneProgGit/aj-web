@@ -22,6 +22,21 @@ pub fn ContestAnnouncements(contest_id: i64) -> Element {
     let mut title_en = use_signal(String::new);
     let text_en = use_signal(String::new);
     let is_owner = STATE.read().is_owner();
+    let uid = STATE.read().user.as_ref().map(|u| u.id).unwrap_or_default();
+    let contest = STATE
+        .read()
+        .contests
+        .iter()
+        .find(|c| c.id == contest_id)
+        .cloned();
+    // Серверное правило create_contest_post: владелец контеста, коавтор, Owner.
+    let can_create = contest.as_ref().is_some_and(|c| {
+        let state = STATE.read();
+        state.user.as_ref().is_some_and(|u| {
+            c.owner_id.is_some_and(|oid| oid == u.id) || c.co_authors.binary_search(&u.id).is_ok()
+        }) || state.is_owner()
+    });
+    let contest_owner = contest.as_ref().and_then(|c| c.owner_id);
 
     let valid = (!title_ru().is_empty() && !text_ru().is_empty())
         || (!title_en().is_empty() && !text_en().is_empty());
@@ -31,11 +46,13 @@ pub fn ContestAnnouncements(contest_id: i64) -> Element {
             div { class: "flex flex-wrap gap-4 items-center",
                 h1 { class: "text-2xl font-bold", "{i18n::tr(&lang, \"Объявления в контесте\", \"Contest announcements\")}" }
 
-                button {
-                    class: "btn btn-neutral btn-sm gap-1",
-                    onclick: move |_| modal_open.set(true),
-                    {icon_element(Icon::Plus, 16)}
-                    span { "{i18n::tr(&lang, \"создать\", \"create\")}" }
+                if can_create {
+                    button {
+                        class: "btn btn-neutral btn-sm gap-1",
+                        onclick: move |_| modal_open.set(true),
+                        {icon_element(Icon::Plus, 16)}
+                        span { "{i18n::tr(&lang, \"создать\", \"create\")}" }
+                    }
                 }
             }
 
@@ -47,7 +64,8 @@ pub fn ContestAnnouncements(contest_id: i64) -> Element {
                         PostCard {
                             post: post.clone(),
                             position: STATE.read().posts.len() - i,
-                            can_manage: post.owner_id == STATE.read().user.as_ref().map(|u| u.id).unwrap_or_default() || is_owner,
+                            // Серверное правило update/delete: автор поста, владелец контеста, Owner.
+                            can_manage: post.owner_id == uid || is_owner || contest_owner.is_some_and(|oid| oid == uid),
                             on_changed: {
                                 move |_| {}
                             },

@@ -61,7 +61,6 @@ async fn reload_data(
 pub fn Home() -> Element {
     let lang = crate::state::language();
     let mut modal_open = use_signal(|| false);
-    let mut busy = use_signal(|| false);
     let mut loaded = use_signal(|| false);
 
     if !*loaded.read() {
@@ -84,24 +83,6 @@ pub fn Home() -> Element {
                         {crate::components::icon::icon_element(Icon::Plus, 16)}
                         span { "{i18n::tr(&lang, \"создать\", \"create\")}" }
                     }
-                }
-
-                button {
-                    class: "btn btn-ghost btn-sm gap-1",
-                    disabled: busy(),
-                    onclick: move |_| {
-                        if busy() {
-                            return;
-                        }
-                        busy.set(true);
-                        let all = STATE.read().contests_is_all;
-                        spawn(async move {
-                            reload_data(all, true, false, false).await;
-                            busy.set(false);
-                        });
-                    },
-                    {crate::components::icon::icon_element(Icon::Update, 14)}
-                    span { "{i18n::tr(&lang, \"обновить\", \"reload\")}" }
                 }
             }
 

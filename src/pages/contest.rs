@@ -212,19 +212,29 @@ pub fn Contest(contest_id: i64) -> Element {
     let mut paste_mode = use_signal(|| false);
     let mut paste_code = use_signal(String::new);
     let mut loaded = use_signal(|| false);
+    // Для какого контеста запущена загрузка: при переходе между контестами
+    // компонент не монтируется заново, без привязки к id ни спиннера,
+    // ни перезагрузки не было бы. Флаг гарантирует один spawn на контест
+    // (иначе каждый ререндер плодил бы задачи -> вис/вылет вкладки).
+    let mut started_for = use_signal(|| None::<i64>);
     let mut busy = use_signal(|| false);
     let mut tab = use_signal(tab_from_url);
 
-    if !*loaded.read() {
+    if started_for() != Some(contest_id) {
+        started_for.set(Some(contest_id));
+        loaded.set(false);
         STATE.write().all_submissions = false;
         spawn(async move {
             load_contest_state(contest_id, 0, false, true).await;
             crate::components::contest_ws::contest_ws(contest_id);
             loaded.set(true);
         });
+    }
+    if !loaded() {
         return rsx! {
-            div { class: "flex justify-center items-center py-16",
+            div { class: "flex flex-col justify-center items-center gap-3 py-16",
                 span { class: "loading loading-spinner loading-lg" }
+                p { class: "italic", "{i18n::tr(&lang, \"загрузка\", \"loading\")}" }
             }
         };
     }

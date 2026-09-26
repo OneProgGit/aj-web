@@ -55,7 +55,7 @@ pub fn Leaderboard(props: LeaderboardProps) -> Element {
                                     th { "=" }
                                 }
                             }
-                            tbody {
+                            tbody { class: "divide-y divide-base-300",
                                 for (place, row) in rows.iter().enumerate() {
                                     tr {
                                         td { "{place + 1}" }

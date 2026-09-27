@@ -38,6 +38,8 @@ pub fn contest_form(
     let mut e_url_ru = use_signal(|| initial.map_or(String::new(), |c| c.editorial_url_ru.clone()));
     let mut s_url_en = use_signal(|| initial.map_or(String::new(), |c| c.statements_url_en.clone()));
     let mut e_url_en = use_signal(|| initial.map_or(String::new(), |c| c.editorial_url_en.clone()));
+    // Язык ссылок на условия/разбор: 0 = русский, 1 = английский.
+    let mut url_lang = use_signal(|| if lang == "en" { 1u8 } else { 0u8 });
     let mut hidden = use_signal(|| initial.map(|c| c.hidden).unwrap_or(false));
     let mut upsolving = use_signal(|| initial.map(|c| c.upsolving_enabled).unwrap_or(false));
     let mut hide_solutions = use_signal(|| initial.map(|c| c.solutions_hidden).unwrap_or(false));
@@ -106,29 +108,44 @@ pub fn contest_form(
                     }
                     span { class: "text-sm", "{i18n::tr(&lang, \"с\", \"s\")}" }
                 }
-                span { class: "label-text", "{i18n::tr(&lang, \"ссылка на условия (рус.)\", \"statements url (ru)\")}" }
-                input {
-                    class: "input input-bordered",
-                    value: s_url_ru(),
-                    oninput: move |ev| s_url_ru.set(ev.value()),
+                div { class: "tabs tabs-box tabs-sm w-fit",
+                    button {
+                        class: if url_lang() == 0 { "tab tab-active" } else { "tab" },
+                        onclick: move |_| url_lang.set(0),
+                        "русский"
+                    }
+                    button {
+                        class: if url_lang() == 1 { "tab tab-active" } else { "tab" },
+                        onclick: move |_| url_lang.set(1),
+                        "английский"
+                    }
                 }
-                span { class: "label-text", "{i18n::tr(&lang, \"ссылка на разбор (рус.)\", \"editorial url (ru)\")}" }
-                input {
-                    class: "input input-bordered",
-                    value: e_url_ru(),
-                    oninput: move |ev| e_url_ru.set(ev.value()),
-                }
-                span { class: "label-text", "{i18n::tr(&lang, \"ссылка на условия (англ.)\", \"statements url (en)\")}" }
-                input {
-                    class: "input input-bordered",
-                    value: s_url_en(),
-                    oninput: move |ev| s_url_en.set(ev.value()),
-                }
-                span { class: "label-text", "{i18n::tr(&lang, \"ссылка на разбор (англ.)\", \"editorial url (en)\")}" }
-                input {
-                    class: "input input-bordered",
-                    value: e_url_en(),
-                    oninput: move |ev| e_url_en.set(ev.value()),
+                if url_lang() == 0 {
+                    span { class: "label-text", "{i18n::tr(&lang, \"ссылка на условия (рус.)\", \"statements url (ru)\")}" }
+                    input {
+                        class: "input input-bordered",
+                        value: s_url_ru(),
+                        oninput: move |ev| s_url_ru.set(ev.value()),
+                    }
+                    span { class: "label-text", "{i18n::tr(&lang, \"ссылка на разбор (рус.)\", \"editorial url (ru)\")}" }
+                    input {
+                        class: "input input-bordered",
+                        value: e_url_ru(),
+                        oninput: move |ev| e_url_ru.set(ev.value()),
+                    }
+                } else {
+                    span { class: "label-text", "{i18n::tr(&lang, \"ссылка на условия (англ.)\", \"statements url (en)\")}" }
+                    input {
+                        class: "input input-bordered",
+                        value: s_url_en(),
+                        oninput: move |ev| s_url_en.set(ev.value()),
+                    }
+                    span { class: "label-text", "{i18n::tr(&lang, \"ссылка на разбор (англ.)\", \"editorial url (en)\")}" }
+                    input {
+                        class: "input input-bordered",
+                        value: e_url_en(),
+                        oninput: move |ev| e_url_en.set(ev.value()),
+                    }
                 }
                 label { class: "label cursor-pointer justify-start gap-2",
                     input { r#type: "checkbox", class: "checkbox checkbox-sm", checked: hidden(), onchange: move |ev| hidden.set(ev.checked()) }

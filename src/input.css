@@ -21,6 +21,21 @@ button.btn {
 /* Таблицы результатов — центрирование. */
 .table th, .table td { text-align: center; }
 
+/* Шапка таблицы всегда видна при скролле. */
+.table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background-color: var(--color-base-100);
+}
+
+/* Вкладка кода посылки: скроллится только код внутри блока
+   (шапка с языком и кнопкой копирования остаётся на месте). */
+.md-code-scroll .md-codeblock > pre {
+    max-height: 24rem;
+    overflow: auto;
+}
+
 /* Markdown bodies (preflight resets typography, so restore it here). */
 .md-body > *:first-child { margin-top: 0; }
 .md-body > *:last-child { margin-bottom: 0; }

@@ -245,12 +245,12 @@ fn SubmissionDetail(props: SubmissionDetailProps) -> Element {
                 button {
                     class: if tab() == 0 { "tab tab-active" } else { "tab" },
                     onclick: move |_| tab.set(0),
-                    "{i18n::tr(&lang, \"Результаты подгрупп\", \"Subgroup results\")}"
+                    "{i18n::tr(&lang, \"результаты подгрупп\", \"subgroup results\")}"
                 }
                 button {
                     class: if tab() == 1 { "tab tab-active" } else { "tab" },
                     onclick: move |_| tab.set(1),
-                    "{i18n::tr(&lang, \"Результаты тестов\", \"Test results\")}"
+                    "{i18n::tr(&lang, \"результаты тестов\", \"test results\")}"
                 }
                 button {
                     class: if tab() == 2 { "tab tab-active" } else { "tab" },
@@ -277,12 +277,13 @@ fn SubmissionDetail(props: SubmissionDetailProps) -> Element {
                             });
                         }
                     },
-                    "{i18n::tr(&lang, \"Код\", \"Code\")}"
+                    "{i18n::tr(&lang, \"код\", \"code\")}"
                 }
             }
 
-            div { class: "flex flex-col gap-2 max-h-96 overflow-y-auto",
+            div { class: "flex flex-col gap-2",
                 if tab() == 0 {
+                    div { class: "flex flex-col gap-2 max-h-96 overflow-y-auto",
                     for (i, r) in submission.subgroups_results.iter().enumerate() {
                         div { class: "bg-base-300 rounded p-4 text-base-content",
                             p { class: "font-medium", "##{i}" }
@@ -293,7 +294,9 @@ fn SubmissionDetail(props: SubmissionDetailProps) -> Element {
                             }
                         }
                     }
+                    }
                 } else if tab() == 1 {
+                    div { class: "flex flex-col gap-2 max-h-96 overflow-y-auto",
                     for (i, t) in submission.tests_results.iter().enumerate() {
                         div { class: "bg-base-300 rounded p-4 text-base-content",
                             p { class: "font-medium", "##{i + 1}" }
@@ -303,10 +306,18 @@ fn SubmissionDetail(props: SubmissionDetailProps) -> Element {
                             }
                         }
                     }
+                    }
                 } else if let Some(text) = code_block {
-                    Markdown { text: text }
+                    // Скроллится только код внутри блока (шапка с языком
+                    // и кнопкой копирования остаётся на месте).
+                    div { class: "md-code-scroll",
+                        Markdown { text: text }
+                    }
                 } else {
-                    p { class: "italic", "{i18n::tr(&lang, \"загрузка...\", \"loading...\")}" }
+                    div { class: "flex flex-col justify-center items-center gap-3 py-8",
+                        span { class: "loading loading-spinner loading-lg" }
+                        p { class: "italic", "{i18n::tr(&lang, \"загрузка\", \"loading\")}" }
+                    }
                 }
             }
         }

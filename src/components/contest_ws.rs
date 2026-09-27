@@ -196,26 +196,44 @@ async fn handle_event(contest_id: Option<i64>, event: ContestEvent) {
         ContestEvent::PostUpdated(id) => {
             if let Some(cid) = contest_id {
                 reload_posts(cid).await;
-            }
-            contest_id.map(|_| {
-                i18n::tr(
+                // Номер как в карточках: позиция с конца списка.
+                let state = STATE.read();
+                let n = state
+                    .posts
+                    .iter()
+                    .position(|p| p.id == *id)
+                    .map(|i| (state.posts.len() - i) as i64)
+                    .unwrap_or(*id);
+                Some(i18n::tr(
                     &lang,
-                    &format!("Объявление #{id} обновлено"),
-                    &format!("Announcement #{id} updated"),
-                )
-            })
+                    &format!("Объявление #{n} обновлено"),
+                    &format!("Announcement #{n} updated"),
+                ))
+            } else {
+                None
+            }
         }
         ContestEvent::PostDeleted(id) => {
             if let Some(cid) = contest_id {
+                // Индекс берём до перезагрузки — после неё поста уже нет.
+                let n = {
+                    let state = STATE.read();
+                    state
+                        .posts
+                        .iter()
+                        .position(|p| p.id == *id)
+                        .map(|i| (state.posts.len() - i) as i64)
+                        .unwrap_or(*id)
+                };
                 reload_posts(cid).await;
-            }
-            contest_id.map(|_| {
-                i18n::tr(
+                Some(i18n::tr(
                     &lang,
-                    &format!("Объявление #{id} удалено"),
-                    &format!("Announcement #{id} deleted"),
-                )
-            })
+                    &format!("Объявление #{n} удалено"),
+                    &format!("Announcement #{n} deleted"),
+                ))
+            } else {
+                None
+            }
         }
         ContestEvent::ContestUpdated(id) => {
             // Тост только если контест нам виден; скрытый тихо исчезает из списка.
@@ -309,27 +327,43 @@ async fn handle_event(contest_id: Option<i64>, event: ContestEvent) {
         }
         ContestEvent::ProblemQuestionDeleted(id) => {
             if let Some(cid) = contest_id {
+                let n = {
+                    let state = STATE.read();
+                    state
+                        .questions
+                        .iter()
+                        .position(|q| q.id == *id)
+                        .map(|i| (state.questions.len() - i) as i64)
+                        .unwrap_or(*id)
+                };
                 reload_questions(cid).await;
-            }
-            contest_id.map(|_| {
-                i18n::tr(
+                Some(i18n::tr(
                     &lang,
-                    &format!("Вопрос #{id} удалён"),
-                    &format!("Question #{id} deleted"),
-                )
-            })
+                    &format!("Вопрос #{n} удалён"),
+                    &format!("Question #{n} deleted"),
+                ))
+            } else {
+                None
+            }
         }
         ContestEvent::ProblemQuestionAnswered(id) => {
             if let Some(cid) = contest_id {
                 reload_questions(cid).await;
-            }
-            contest_id.map(|_| {
-                i18n::tr(
+                let state = STATE.read();
+                let n = state
+                    .questions
+                    .iter()
+                    .position(|q| q.id == *id)
+                    .map(|i| (state.questions.len() - i) as i64)
+                    .unwrap_or(*id);
+                Some(i18n::tr(
                     &lang,
-                    &format!("Ответ на вопрос #{id}"),
-                    &format!("Question #{id} answered"),
-                )
-            })
+                    &format!("Ответ на вопрос #{n}"),
+                    &format!("Question #{n} answered"),
+                ))
+            } else {
+                None
+            }
         }
     };
     if let Some(text) = notice {

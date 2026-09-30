@@ -1,11 +1,12 @@
 use dioxus::prelude::*;
 
 use crate::{
-    alerts::{show_alert, AlertKind},
+    alerts::{AlertKind, show_alert},
     api,
     components::{
-        icon::{icon_element, Icon},
+        icon::{Icon, icon_element},
         leaderboard::Leaderboard,
+        loading::Loading,
     },
     i18n,
     state::STATE,
@@ -14,10 +15,12 @@ use crate::{
 #[component]
 pub fn ContestLeaderboard(contest_id: i64) -> Element {
     let lang = crate::state::language();
+    let mut started_for = use_signal(|| None::<i64>);
     let mut loaded = use_signal(|| false);
 
-    if !*loaded.read() {
-        loaded.set(true);
+    if started_for() != Some(contest_id) {
+        started_for.set(Some(contest_id));
+        loaded.set(false);
         spawn(async move {
             let token = crate::state::token();
             match api::contests::get_contest(contest_id, &token).await {
@@ -39,6 +42,7 @@ pub fn ContestLeaderboard(contest_id: i64) -> Element {
                 Ok(rows) => STATE.write().leaderboard = rows,
                 Err(e) => show_alert(AlertKind::Error, e),
             }
+            loaded.set(true);
         });
     }
 
@@ -92,13 +96,20 @@ pub fn ContestLeaderboard(contest_id: i64) -> Element {
             let mut md = String::new();
             md.push_str(&format!(
                 "| {} |\n|{}|\n",
-                header.iter().map(|h| esc_md(h)).collect::<Vec<_>>().join(" | "),
+                header
+                    .iter()
+                    .map(|h| esc_md(h))
+                    .collect::<Vec<_>>()
+                    .join(" | "),
                 header.iter().map(|_| "---").collect::<Vec<_>>().join("|"),
             ));
             for row in &table {
                 md.push_str(&format!(
                     "| {} |\n",
-                    row.iter().map(|c| esc_md(c)).collect::<Vec<_>>().join(" | "),
+                    row.iter()
+                        .map(|c| esc_md(c))
+                        .collect::<Vec<_>>()
+                        .join(" | "),
                 ));
             }
             crate::api::trigger_download(md.into_bytes(), "leaderboard.md");
@@ -177,11 +188,15 @@ pub fn ContestLeaderboard(contest_id: i64) -> Element {
                 }
             }
 
-            Leaderboard {
-                rows: rows,
-                problems: table_problems,
-                contest_id: contest_id,
-                can_manage: can_manage,
+            if !loaded() {
+                Loading {}
+            } else {
+                Leaderboard {
+                    rows: rows,
+                    problems: table_problems,
+                    contest_id: contest_id,
+                    can_manage: can_manage,
+                }
             }
         }
     }

@@ -5,15 +5,15 @@ use wasm_bindgen::JsCast;
 use crate::{
     api, i18n,
     models::{
-        problems::{ProblemType, PublicProblemConfig, Subgroup, SubgroupType},
         DeletionRequest,
+        problems::{ProblemType, PublicProblemConfig, Subgroup, SubgroupType},
     },
     state::STATE,
 };
 
 use super::{
     delete_form::DeleteForm,
-    icon::{icon_element, Icon},
+    icon::{Icon, icon_element},
 };
 
 /// Subgroup mini-card inside a problem card (mirrors `AJSubgroupCard`).
@@ -25,8 +25,7 @@ pub struct SubgroupCardProps {
 
 impl PartialEq for SubgroupCardProps {
     fn eq(&self, other: &Self) -> bool {
-        crate::models::props_json_eq(&self.subgroup, &other.subgroup)
-            && self.index == other.index
+        crate::models::props_json_eq(&self.subgroup, &other.subgroup) && self.index == other.index
     }
 }
 

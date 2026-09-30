@@ -1,10 +1,10 @@
 use dioxus::prelude::*;
 
 use crate::{
-    alerts::{show_alert, AlertKind},
+    alerts::{AlertKind, show_alert},
     api,
     components::{
-        icon::{icon_element, Icon},
+        icon::{Icon, icon_element},
         markdown::MdField,
         post_card::PostCard,
     },

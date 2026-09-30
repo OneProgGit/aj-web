@@ -2,14 +2,14 @@ use dioxus::prelude::*;
 
 use crate::{
     api, i18n,
-    models::{problems::ProblemQuestion, DeletionRequest},
+    models::{DeletionRequest, problems::ProblemQuestion},
     state::STATE,
 };
 
 use super::{
     datetime_text::DateTimeText,
     delete_form::DeleteForm,
-    icon::{icon_element, Icon},
+    icon::{Icon, icon_element},
     markdown::{Markdown, MdField},
     user_link::UserLink,
 };

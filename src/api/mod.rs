@@ -29,7 +29,12 @@ fn endpoint(path: &str) -> String {
 /// Send the request builder with the token; on non-2xx parse the backend
 /// `AdaJudgeError` into a localized Russian message.
 async fn check(res: reqwest::Result<reqwest::Response>) -> Result<reqwest::Response, String> {
-    let res = res.map_err(|e| format!("{}: {e}", crate::i18n::tr(&crate::state::language(), "Сетевая ошибка", "Network error")))?;
+    let res = res.map_err(|e| {
+        format!(
+            "{}: {e}",
+            crate::i18n::tr(&crate::state::language(), "Сетевая ошибка", "Network error")
+        )
+    })?;
     if res.status().is_success() {
         Ok(res)
     } else {
@@ -45,7 +50,10 @@ async fn check(res: reqwest::Result<reqwest::Response>) -> Result<reqwest::Respo
                 }
                 Err(crate::models::errors::describe_error(&error))
             }
-            Err(_) => Err(format!("{}: {status}", crate::i18n::tr(&crate::state::language(), "Ошибка сервера", "Server error"))),
+            Err(_) => Err(format!(
+                "{}: {status}",
+                crate::i18n::tr(&crate::state::language(), "Ошибка сервера", "Server error")
+            )),
         }
     }
 }
@@ -59,7 +67,16 @@ pub async fn get<T: serde::de::DeserializeOwned>(
         req = req.header("Authorization", auth);
     }
     let res = check(req.send().await).await?;
-    res.json().await.map_err(|e| format!("{}: {e}", crate::i18n::tr(&crate::state::language(), "Ошибка разбора ответа", "Response parse error")))
+    res.json().await.map_err(|e| {
+        format!(
+            "{}: {e}",
+            crate::i18n::tr(
+                &crate::state::language(),
+                "Ошибка разбора ответа",
+                "Response parse error"
+            )
+        )
+    })
 }
 
 pub async fn get_bytes(path: &str, token: &Option<String>) -> Result<Vec<u8>, String> {
@@ -68,7 +85,16 @@ pub async fn get_bytes(path: &str, token: &Option<String>) -> Result<Vec<u8>, St
         req = req.header("Authorization", auth);
     }
     let res = check(req.send().await).await?;
-    res.bytes().await.map(|b| b.to_vec()).map_err(|e| format!("{}: {e}", crate::i18n::tr(&crate::state::language(), "Ошибка чтения ответа", "Response read error")))
+    res.bytes().await.map(|b| b.to_vec()).map_err(|e| {
+        format!(
+            "{}: {e}",
+            crate::i18n::tr(
+                &crate::state::language(),
+                "Ошибка чтения ответа",
+                "Response read error"
+            )
+        )
+    })
 }
 
 pub async fn send_json<B: serde::Serialize>(
@@ -77,9 +103,7 @@ pub async fn send_json<B: serde::Serialize>(
     token: &Option<String>,
     body: &B,
 ) -> Result<(), String> {
-    let mut req = client(token)
-        .request(method, endpoint(path))
-        .json(body);
+    let mut req = client(token).request(method, endpoint(path)).json(body);
     if let Some(auth) = auth_header(token) {
         req = req.header("Authorization", auth);
     }
@@ -128,9 +152,13 @@ pub async fn read_file_bytes(
         .and_then(|files| files.item(0))
         .ok_or_else(|| "Файл не выбран".to_string())?;
     let name = file.name();
-    let buffer = JsFuture::from(file.array_buffer())
-        .await
-        .map_err(|_| crate::i18n::tr(&crate::state::language(), "Не удалось прочитать файл", "Could not read file"))?;
+    let buffer = JsFuture::from(file.array_buffer()).await.map_err(|_| {
+        crate::i18n::tr(
+            &crate::state::language(),
+            "Не удалось прочитать файл",
+            "Could not read file",
+        )
+    })?;
     let typed = js_sys::Uint8Array::new(&buffer);
     Ok((name, typed.to_vec()))
 }

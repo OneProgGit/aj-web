@@ -1,6 +1,6 @@
 use dioxus::prelude::*;
 
-use super::icon::{icon_element, Icon};
+use super::icon::{Icon, icon_element};
 
 /// Password input with a show/hide eye toggle.
 #[component]

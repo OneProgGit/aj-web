@@ -64,7 +64,7 @@ pub struct GlobalState {
     pub user: Option<PrivateUserData>,
     pub language: String,
     pub contests: Vec<PublicContestConfig>,
-#[allow(dead_code)]
+    #[allow(dead_code)]
     pub my_contests: Vec<PublicContestConfig>,
     pub contests_is_all: bool,
     pub contest_problems: Vec<PublicProblemConfig>,

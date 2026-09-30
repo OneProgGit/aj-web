@@ -1,7 +1,7 @@
 use dioxus::prelude::*;
 
 use crate::{
-    components::icon::{icon_element, Icon},
+    components::icon::{Icon, icon_element},
     i18n,
 };
 

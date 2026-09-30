@@ -3,10 +3,11 @@ use dioxus_web::WebEventExt;
 use wasm_bindgen::JsCast;
 
 use crate::{
-    alerts::{show_alert, AlertKind},
+    alerts::{AlertKind, show_alert},
     api,
     components::{
-        icon::{icon_element, Icon},
+        icon::{Icon, icon_element},
+        loading::Loading,
         problem_card::ProblemCard,
     },
     i18n,
@@ -18,12 +19,14 @@ pub fn Problems() -> Element {
     let lang = crate::state::language();
     let mut all_problems = use_signal(|| false);
     let mut picked = use_signal(|| None::<(String, Vec<u8>)>);
-    let mut loaded = use_signal(|| false);
+    let mut started = use_signal(|| false);
+    let mut loading = use_signal(|| false);
     let mut busy = use_signal(|| false);
     let is_owner = STATE.read().is_owner();
 
-    if !*loaded.read() {
-        loaded.set(true);
+    if !started() {
+        started.set(true);
+        loading.set(true);
         STATE.write().problems = Vec::new();
         let all = all_problems();
         let token = crate::state::token();
@@ -37,6 +40,7 @@ pub fn Problems() -> Element {
                 Ok(list) => STATE.write().problems = list,
                 Err(e) => show_alert(AlertKind::Error, e),
             }
+            loading.set(false);
         });
     }
 
@@ -47,11 +51,7 @@ pub fn Problems() -> Element {
             &format!("pick archive ({name})"),
         )
     } else {
-        i18n::tr(
-            &lang,
-            "выбрать архив",
-            "pick archive",
-        )
+        i18n::tr(&lang, "выбрать архив", "pick archive")
     };
 
     rsx! {
@@ -159,7 +159,9 @@ pub fn Problems() -> Element {
                 }
             }
 
-            if STATE.read().problems.is_empty() {
+            if loading() {
+                Loading {}
+            } else if STATE.read().problems.is_empty() {
                 p { class: "italic", "{i18n::tr(&lang, \"Задач пока что нет\", \"No problems yet\")}" }
             } else {
                 div { class: "flex flex-col gap-4 w-full max-h-[32rem] overflow-y-auto",

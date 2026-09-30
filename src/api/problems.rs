@@ -1,8 +1,6 @@
 use crate::{
     api,
-    models::{
-        testing::{Submission, SubmissonRequest},
-    },
+    models::testing::{Submission, SubmissonRequest},
 };
 use reqwest::{Method, StatusCode};
 
@@ -33,10 +31,7 @@ pub async fn get_all_problems(
     api::get("/problems", token).await
 }
 
-pub async fn create_problem(
-    archive_bytes: Vec<u8>,
-    token: &Option<String>,
-) -> Result<(), String> {
+pub async fn create_problem(archive_bytes: Vec<u8>, token: &Option<String>) -> Result<(), String> {
     let form = reqwest::multipart::Form::new().part(
         "problem_archive",
         reqwest::multipart::Part::bytes(archive_bytes),
@@ -47,17 +42,21 @@ pub async fn create_problem(
     if let Some(auth) = api::auth_header(token) {
         req = req.header("Authorization", auth);
     }
-    let res = req
-        .send()
-        .await
-        .map_err(|e| format!("{}: {e}", crate::i18n::tr(&crate::state::language(), "Сетевая ошибка", "Network error")))?;
+    let res = req.send().await.map_err(|e| {
+        format!(
+            "{}: {e}",
+            crate::i18n::tr(&crate::state::language(), "Сетевая ошибка", "Network error")
+        )
+    })?;
     if res.status().is_success() {
         Ok(())
     } else {
-        let error: crate::models::errors::AdaJudgeError = res
-            .json()
-            .await
-            .map_err(|e| format!("{}: {e}", crate::i18n::tr(&crate::state::language(), "Ошибка сервера", "Server error")))?;
+        let error: crate::models::errors::AdaJudgeError = res.json().await.map_err(|e| {
+            format!(
+                "{}: {e}",
+                crate::i18n::tr(&crate::state::language(), "Ошибка сервера", "Server error")
+            )
+        })?;
         Err(crate::models::errors::describe_error(&error))
     }
 }
@@ -77,17 +76,21 @@ pub async fn update_problem(
     if let Some(auth) = api::auth_header(token) {
         req = req.header("Authorization", auth);
     }
-    let res = req
-        .send()
-        .await
-        .map_err(|e| format!("{}: {e}", crate::i18n::tr(&crate::state::language(), "Сетевая ошибка", "Network error")))?;
+    let res = req.send().await.map_err(|e| {
+        format!(
+            "{}: {e}",
+            crate::i18n::tr(&crate::state::language(), "Сетевая ошибка", "Network error")
+        )
+    })?;
     if res.status().is_success() {
         Ok(())
     } else {
-        let error: crate::models::errors::AdaJudgeError = res
-            .json()
-            .await
-            .map_err(|e| format!("{}: {e}", crate::i18n::tr(&crate::state::language(), "Ошибка сервера", "Server error")))?;
+        let error: crate::models::errors::AdaJudgeError = res.json().await.map_err(|e| {
+            format!(
+                "{}: {e}",
+                crate::i18n::tr(&crate::state::language(), "Ошибка сервера", "Server error")
+            )
+        })?;
         Err(crate::models::errors::describe_error(&error))
     }
 }
@@ -116,21 +119,26 @@ pub async fn download_problem(problem_id: i64, token: &Option<String>) -> Result
 }
 
 pub async fn retest_problem(problem_id: i64, token: &Option<String>) -> Result<(), String> {
-    let mut req = api::client(token).post(format!("{}/problems/{problem_id}/retest", api::api_base()));
+    let mut req =
+        api::client(token).post(format!("{}/problems/{problem_id}/retest", api::api_base()));
     if let Some(auth) = api::auth_header(token) {
         req = req.header("Authorization", auth);
     }
-    let res = req
-        .send()
-        .await
-        .map_err(|e| format!("{}: {e}", crate::i18n::tr(&crate::state::language(), "Сетевая ошибка", "Network error")))?;
+    let res = req.send().await.map_err(|e| {
+        format!(
+            "{}: {e}",
+            crate::i18n::tr(&crate::state::language(), "Сетевая ошибка", "Network error")
+        )
+    })?;
     if res.status().is_success() {
         Ok(())
     } else {
-        let error: crate::models::errors::AdaJudgeError = res
-            .json()
-            .await
-            .map_err(|e| format!("{}: {e}", crate::i18n::tr(&crate::state::language(), "Ошибка сервера", "Server error")))?;
+        let error: crate::models::errors::AdaJudgeError = res.json().await.map_err(|e| {
+            format!(
+                "{}: {e}",
+                crate::i18n::tr(&crate::state::language(), "Ошибка сервера", "Server error")
+            )
+        })?;
         Err(crate::models::errors::describe_error(&error))
     }
 }
@@ -170,16 +178,32 @@ pub async fn submit_solution(
     file_bytes: Vec<u8>,
     token: &Option<String>,
 ) -> Result<i64, String> {
-    let json = serde_json::to_string(&SubmissonRequest { language })
-        .map_err(|e| format!("{}: {e}", crate::i18n::tr(&crate::state::language(), "Ошибка сериализации", "Serialization error")))?;
+    let json = serde_json::to_string(&SubmissonRequest { language }).map_err(|e| {
+        format!(
+            "{}: {e}",
+            crate::i18n::tr(
+                &crate::state::language(),
+                "Ошибка сериализации",
+                "Serialization error"
+            )
+        )
+    })?;
     let form = reqwest::multipart::Form::new()
         .part(
             "submission_data",
             reqwest::multipart::Part::text(json)
                 .mime_str("application/json")
-                .map_err(|e| format!("{}: {e}", crate::i18n::tr(&crate::state::language(), "Ошибка", "Error")))?,
+                .map_err(|e| {
+                    format!(
+                        "{}: {e}",
+                        crate::i18n::tr(&crate::state::language(), "Ошибка", "Error")
+                    )
+                })?,
         )
-        .part("submission_file", reqwest::multipart::Part::bytes(file_bytes));
+        .part(
+            "submission_file",
+            reqwest::multipart::Part::bytes(file_bytes),
+        );
     let mut req = api::client(token).post(format!(
         "{}/contests/{contest_id}/problems/{problem_id}/submit",
         api::api_base()
@@ -187,21 +211,26 @@ pub async fn submit_solution(
     if let Some(auth) = api::auth_header(token) {
         req = req.header("Authorization", auth);
     }
-    let res = req
-        .multipart(form)
-        .send()
-        .await
-        .map_err(|e| format!("{}: {e}", crate::i18n::tr(&crate::state::language(), "Сетевая ошибка", "Network error")))?;
+    let res = req.multipart(form).send().await.map_err(|e| {
+        format!(
+            "{}: {e}",
+            crate::i18n::tr(&crate::state::language(), "Сетевая ошибка", "Network error")
+        )
+    })?;
     match res.status() {
-        StatusCode::OK => res
-            .json()
-            .await
-            .map_err(|e| format!("{}: {e}", crate::i18n::tr(&crate::state::language(), "Ошибка ответа", "Response error"))),
+        StatusCode::OK => res.json().await.map_err(|e| {
+            format!(
+                "{}: {e}",
+                crate::i18n::tr(&crate::state::language(), "Ошибка ответа", "Response error")
+            )
+        }),
         _ => {
-            let error: crate::models::errors::AdaJudgeError = res
-                .json()
-                .await
-                .map_err(|e| format!("{}: {e}", crate::i18n::tr(&crate::state::language(), "Ошибка сервера", "Server error")))?;
+            let error: crate::models::errors::AdaJudgeError = res.json().await.map_err(|e| {
+                format!(
+                    "{}: {e}",
+                    crate::i18n::tr(&crate::state::language(), "Ошибка сервера", "Server error")
+                )
+            })?;
             Err(crate::models::errors::describe_error(&error))
         }
     }

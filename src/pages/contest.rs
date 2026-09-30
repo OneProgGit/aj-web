@@ -3,19 +3,19 @@ use dioxus_web::WebEventExt;
 use wasm_bindgen::JsCast;
 
 use crate::{
-    alerts::{show_alert, AlertKind},
+    alerts::{AlertKind, show_alert},
     api,
     components::{
         contest_card::ContestCard,
-        icon::{icon_element, Icon},
+        icon::{Icon, icon_element},
+        loading::Loading,
         problem_card::ProblemCard,
         submissions::Submissions,
     },
     i18n,
     models::{problems::PublicProblemConfig, testing::Language},
     pages::{
-        contest_announcements::ContestAnnouncements,
-        contest_leaderboard::ContestLeaderboard,
+        contest_announcements::ContestAnnouncements, contest_leaderboard::ContestLeaderboard,
         contest_questions::ContestQuestions,
     },
     state::STATE,
@@ -51,15 +51,18 @@ fn tab_to_url(tab: u8) {
         if let Ok(path) = window.location().pathname() {
             let url = format!("{path}{query}");
             if let Ok(history) = window.history() {
-                let _ = history
-                    .replace_state_with_url(&wasm_bindgen::JsValue::NULL, "", Some(&url));
+                let _ =
+                    history.replace_state_with_url(&wasm_bindgen::JsValue::NULL, "", Some(&url));
             }
         }
     }
 }
 
 /// Shared problem selector (used in main + submissions tabs).
-fn problem_selector(problems: Vec<PublicProblemConfig>, mut selected_problem: Signal<usize>) -> Element {
+fn problem_selector(
+    problems: Vec<PublicProblemConfig>,
+    mut selected_problem: Signal<usize>,
+) -> Element {
     rsx! {
         select {
             class: "select select-bordered select-sm",
@@ -232,10 +235,7 @@ pub fn Contest(contest_id: i64) -> Element {
     }
     if !loaded() {
         return rsx! {
-            div { class: "flex flex-col justify-center items-center gap-3 py-16",
-                span { class: "loading loading-spinner loading-lg" }
-                p { class: "italic", "{i18n::tr(&lang, \"загрузка\", \"loading\")}" }
-            }
+            Loading {}
         };
     }
 
@@ -267,7 +267,8 @@ pub fn Contest(contest_id: i64) -> Element {
         &format!("вопросы ({questions_answered}/{questions_count})"),
         &format!("questions ({questions_answered}/{questions_count})"),
     );
-    let pick_label = if !solution_name().is_empty() {        i18n::tr(
+    let pick_label = if !solution_name().is_empty() {
+        i18n::tr(
             &lang,
             &format!("изменить файл ({})", solution_name()),
             &format!("change file ({})", solution_name()),

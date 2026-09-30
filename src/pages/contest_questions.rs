@@ -1,10 +1,10 @@
 use dioxus::prelude::*;
 
 use crate::{
-    alerts::{show_alert, AlertKind},
+    alerts::{AlertKind, show_alert},
     api,
     components::{
-        icon::{icon_element, Icon},
+        icon::{Icon, icon_element},
         markdown::MdField,
         question_card::QuestionCard,
     },
@@ -50,7 +50,13 @@ pub fn ContestQuestions(contest_id: i64) -> Element {
         .map(|q| {
             let problem_name = problems.iter().find(|p| p.id == q.problem_id).map_or_else(
                 || "?".to_string(),
-                |p| format!("#{} {}", p.index + 1, i18n::problem_title(&lang, &p.name_ru, &p.name_en)),
+                |p| {
+                    format!(
+                        "#{} {}",
+                        p.index + 1,
+                        i18n::problem_title(&lang, &p.name_ru, &p.name_en)
+                    )
+                },
             );
             let can_answer = can_manage(&q);
             let can_delete = user_id.is_some_and(|id| id == q.owner_id)

@@ -8,6 +8,7 @@ use crate::{
         datetime_text::DateTimeText,
         delete_form::DeleteForm,
         icon::{Icon, icon_element},
+        loading::Loading,
     },
     i18n,
     models::DeletionRequest,
@@ -21,11 +22,17 @@ pub fn Account() -> Element {
     let mut deleting = use_signal(|| false);
     let user = STATE.read().user.clone();
 
+    // Профиль подтягивается в App (/users/me) — пока его нет, но токен есть,
+    // показываем загрузку вместо «не вошли в аккаунт».
     let Some(user) = user else {
         return rsx! {
             div { class: "flex flex-col items-start gap-4 max-w-7xl mx-auto w-full",
                 button { class: "btn btn-ghost btn-sm gap-2", onclick: move |_| { let _ = navigator.push(crate::Route::Home {}); },                     {icon_element(Icon::Back, 16)}, span { "{i18n::tr(&lang, \"назад\", \"back\")}" } }
-                p { class: "italic", "{i18n::tr(&lang, \"Вы не вошли в аккаунт\", \"You are not logged in\")}" }
+                if STATE.read().token.is_some() {
+                    Loading {}
+                } else {
+                    p { class: "italic", "{i18n::tr(&lang, \"Вы не вошли в аккаунт\", \"You are not logged in\")}" }
+                }
             }
         };
     };

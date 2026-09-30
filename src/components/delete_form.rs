@@ -1,7 +1,7 @@
 use dioxus::prelude::*;
 
 use super::{
-    icon::{icon_element, Icon},
+    icon::{Icon, icon_element},
     password_field::PasswordField,
 };
 

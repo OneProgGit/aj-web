@@ -9,6 +9,7 @@ pub mod datetime_text;
 pub mod delete_form;
 pub mod icon;
 pub mod leaderboard;
+pub mod loading;
 pub mod markdown;
 pub mod password_field;
 pub mod post_card;

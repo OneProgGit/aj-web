@@ -1,16 +1,17 @@
 use dioxus::prelude::*;
 
 use crate::{
-    alerts::{show_alert, AlertKind},
+    alerts::{AlertKind, show_alert},
     api,
     components::{
         admin_badge::AdminBadge,
         datetime_text::DateTimeText,
         delete_form::DeleteForm,
-        icon::{icon_element, Icon},
+        icon::{Icon, icon_element},
+        loading::Loading,
     },
     i18n,
-    models::{users::AdminLevel, DeletionRequest},
+    models::{DeletionRequest, users::AdminLevel},
     state::STATE,
 };
 
@@ -18,14 +19,18 @@ use crate::{
 pub fn UserPrivateProfile(user_id: i64) -> Element {
     let lang = crate::state::language();
     let navigator = use_navigator();
+    // Загрузка привязана к user_id (при смене профиля — новый запрос).
+    let mut started_for = use_signal(|| None::<i64>);
     let mut loaded = use_signal(|| false);
     let mut user = use_signal(|| None::<crate::models::users::PrivateUserData>);
     let mut level_idx = use_signal(|| 0usize);
     let mut deleting = use_signal(|| false);
     let mut busy = use_signal(|| false);
 
-    if !*loaded.read() {
-        loaded.set(true);
+    if started_for() != Some(user_id) {
+        started_for.set(Some(user_id));
+        loaded.set(false);
+        user.set(None);
         let token = crate::state::token();
         spawn(async move {
             match api::users::get_private_user(user_id, &token).await {
@@ -39,6 +44,7 @@ pub fn UserPrivateProfile(user_id: i64) -> Element {
                 }
                 Err(e) => show_alert(AlertKind::Error, e),
             }
+            loaded.set(true);
         });
     }
 
@@ -57,7 +63,9 @@ pub fn UserPrivateProfile(user_id: i64) -> Element {
 
             h1 { class: "text-2xl font-bold", "{i18n::tr(&lang, \"Профиль\", \"Profile\")}" }
 
-            if let Some((level, profile)) = profile_data {
+            if !loaded() {
+                Loading {}
+            } else if let Some((level, profile)) = profile_data {
                 div { class: "card w-full max-w-3xl bg-base-200 shadow-lg overflow-hidden",
                     div { class: match &level {
                         crate::models::users::AdminLevel::User => "h-24 bg-gradient-to-r from-info to-primary",

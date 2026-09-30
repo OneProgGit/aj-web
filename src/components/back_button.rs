@@ -1,6 +1,6 @@
 use dioxus::prelude::*;
 
-use super::icon::{icon_element, Icon};
+use super::icon::{Icon, icon_element};
 
 /// Back link with the «назад» label. Mirrors the `BackButton` used on aj-app pages.
 #[component]

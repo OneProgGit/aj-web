@@ -7,7 +7,7 @@ use crate::{
 };
 
 use super::datetime_input::datetime_input;
-use super::icon::{icon_element, Icon};
+use super::icon::{Icon, icon_element};
 
 /// Create/edit form for a contest. Mirrors the «создать контест» and
 /// «изменить контест» popups from aj-app's HomePage / ContestCard.
@@ -23,9 +23,7 @@ pub fn contest_form(
     let mut name_ru = use_signal(|| initial.map_or(String::new(), |c| c.name_ru.clone()));
     let mut name_en = use_signal(|| initial.map_or(String::new(), |c| c.name_en.clone()));
     let mut starts = use_signal(|| initial.map_or(now, |c| c.starts_at));
-    let init_secs = initial.map_or(7200, |c| {
-        (c.finishes_at - c.starts_at).num_seconds().max(0)
-    });
+    let init_secs = initial.map_or(7200, |c| (c.finishes_at - c.starts_at).num_seconds().max(0));
     let mut dur_d = use_signal(|| (init_secs / 86400).to_string());
     let mut dur_h = use_signal(|| ((init_secs % 86400) / 3600).to_string());
     let mut dur_m = use_signal(|| ((init_secs % 3600) / 60).to_string());
@@ -34,16 +32,19 @@ pub fn contest_form(
         let p = |v: String| v.parse::<i64>().unwrap_or(0).max(0);
         p(dur_d()) * 86400 + p(dur_h()) * 3600 + p(dur_m()) * 60 + p(dur_s())
     };
-    let mut s_url_ru = use_signal(|| initial.map_or(String::new(), |c| c.statements_url_ru.clone()));
+    let mut s_url_ru =
+        use_signal(|| initial.map_or(String::new(), |c| c.statements_url_ru.clone()));
     let mut e_url_ru = use_signal(|| initial.map_or(String::new(), |c| c.editorial_url_ru.clone()));
-    let mut s_url_en = use_signal(|| initial.map_or(String::new(), |c| c.statements_url_en.clone()));
+    let mut s_url_en =
+        use_signal(|| initial.map_or(String::new(), |c| c.statements_url_en.clone()));
     let mut e_url_en = use_signal(|| initial.map_or(String::new(), |c| c.editorial_url_en.clone()));
     // Язык ссылок на условия/разбор: 0 = русский, 1 = английский.
     let mut url_lang = use_signal(|| if lang == "en" { 1u8 } else { 0u8 });
     let mut hidden = use_signal(|| initial.map(|c| c.hidden).unwrap_or(false));
     let mut upsolving = use_signal(|| initial.map(|c| c.upsolving_enabled).unwrap_or(false));
     let mut hide_solutions = use_signal(|| initial.map(|c| c.solutions_hidden).unwrap_or(false));
-    let mut hide_leaderboard = use_signal(|| initial.map(|c| c.leaderboard_hidden).unwrap_or(false));
+    let mut hide_leaderboard =
+        use_signal(|| initial.map(|c| c.leaderboard_hidden).unwrap_or(false));
     let mut co_authors = use_signal(|| {
         initial.map_or(String::new(), |c| {
             c.co_authors

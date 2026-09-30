@@ -1,11 +1,11 @@
 use dioxus::prelude::*;
 use futures_util::{FutureExt, SinkExt, StreamExt};
-use gloo_net::websocket::futures::WebSocket;
 use gloo_net::websocket::Message;
+use gloo_net::websocket::futures::WebSocket;
 use wasm_bindgen_futures::spawn_local;
 
 use crate::{
-    alerts::{show_alert, AlertKind},
+    alerts::{AlertKind, show_alert},
     i18n,
     models::contests::ContestEvent,
     state::STATE,
@@ -14,12 +14,18 @@ use crate::{
 /// Вставка/замена с сохранением серверного порядка (`c.id desc`):
 /// существующий — заменяется на месте (id неизменен, порядок цел),
 /// отсутствующий (новый, отжатый "скрыть") — встаёт по своему id.
-fn upsert_contest(list: &mut Vec<crate::models::contests::PublicContestConfig>, fresh: crate::models::contests::PublicContestConfig) {
+fn upsert_contest(
+    list: &mut Vec<crate::models::contests::PublicContestConfig>,
+    fresh: crate::models::contests::PublicContestConfig,
+) {
     if let Some(slot) = list.iter_mut().find(|c| c.id == fresh.id) {
         *slot = fresh;
         return;
     }
-    let pos = list.iter().position(|c| fresh.id > c.id).unwrap_or(list.len());
+    let pos = list
+        .iter()
+        .position(|c| fresh.id > c.id)
+        .unwrap_or(list.len());
     list.insert(pos, fresh);
 }
 
@@ -113,12 +119,16 @@ pub fn contests_feed_ws(mine: bool) {
         return;
     }
     spawn_local(async move {
-        let path = if mine { "/contests/my/ws" } else { "/contests/ws" };
+        let path = if mine {
+            "/contests/my/ws"
+        } else {
+            "/contests/ws"
+        };
         loop {
             if !crate::state::WS_SUBSCRIBED.read().contains(&key) {
                 break;
             }
-            ws_loop(&ws_url(path), |event| handle_feed_event(event)).await;
+            ws_loop(&ws_url(path), handle_feed_event).await;
             gloo_timers::future::TimeoutFuture::new(WS_RETRY_MS).await;
         }
     });
@@ -138,7 +148,11 @@ fn ws_url(path: &str) -> String {
     let mut url = format!("{scheme}://{host_port}{path}");
     // Браузерный WebSocket не шлёт заголовки — токен отдаём query-параметром.
     if let Some(token) = crate::state::token() {
-        url.push_str(if path.contains('?') { "&token=" } else { "?token=" });
+        url.push_str(if path.contains('?') {
+            "&token="
+        } else {
+            "?token="
+        });
         url.push_str(&token);
     }
     url

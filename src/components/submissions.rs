@@ -8,7 +8,8 @@ use crate::{
 
 use super::{
     datetime_text::DateTimeText,
-    icon::{icon_element, Icon},
+    icon::{Icon, icon_element},
+    loading::Loading,
     markdown::Markdown,
     user_link::UserLink,
     verdict_badge::VerdictBadge,
@@ -92,7 +93,11 @@ pub fn Submissions(props: SubmissionsProps) -> Element {
                         h3 { class: "card-title", span { "{title}" } }
                         button { class: "btn btn-sm btn-circle btn-ghost", onclick: move |_| details.set(None), "✕" }
                     }
-                    SubmissionDetail { submission: submission.clone(), lang: lang.clone() }
+                    SubmissionDetail {
+                        submission: submission.clone(),
+                        lang: lang.clone(),
+                        show_code: show_download,
+                    }
                 }
             }
         }
@@ -209,17 +214,23 @@ pub fn Submissions(props: SubmissionsProps) -> Element {
 struct SubmissionDetailProps {
     submission: Submission,
     lang: String,
+    show_code: bool,
 }
 
 impl PartialEq for SubmissionDetailProps {
     fn eq(&self, other: &Self) -> bool {
         crate::models::props_json_eq(&self.submission, &other.submission)
             && self.lang == other.lang
+            && self.show_code == other.show_code
     }
 }
 
 fn SubmissionDetail(props: SubmissionDetailProps) -> Element {
-    let SubmissionDetailProps { submission, lang } = props;
+    let SubmissionDetailProps {
+        submission,
+        lang,
+        show_code,
+    } = props;
     let mut tab = use_signal(|| 0u8); // 0 = subgroups, 1 = tests, 2 = code
     let mut code = use_signal(|| None::<String>);
     // Модалка переиспользуется между посылками — сбрасываем состояние.
@@ -252,32 +263,34 @@ fn SubmissionDetail(props: SubmissionDetailProps) -> Element {
                     onclick: move |_| tab.set(1),
                     "{i18n::tr(&lang, \"результаты тестов\", \"test results\")}"
                 }
-                button {
-                    class: if tab() == 2 { "tab tab-active" } else { "tab" },
-                    onclick: move |_| {
-                        tab.set(2);
-                        if code().is_none() {
-                            let token = STATE.read().token.clone();
-                            let sid = submission.id;
-                            spawn(async move {
-                                match api::get_bytes(
-                                    &format!("/submissions/{sid}/download"),
-                                    &token,
-                                )
-                                .await
-                                {
-                                    Ok(bytes) => code.set(Some(
-                                        String::from_utf8_lossy(&bytes).into_owned(),
-                                    )),
-                                    Err(e) => crate::alerts::show_alert(
-                                        crate::alerts::AlertKind::Error,
-                                        e,
-                                    ),
-                                }
-                            });
-                        }
-                    },
-                    "{i18n::tr(&lang, \"код\", \"code\")}"
+                if show_code {
+                    button {
+                        class: if tab() == 2 { "tab tab-active" } else { "tab" },
+                        onclick: move |_| {
+                            tab.set(2);
+                            if code().is_none() {
+                                let token = STATE.read().token.clone();
+                                let sid = submission.id;
+                                spawn(async move {
+                                    match api::get_bytes(
+                                        &format!("/submissions/{sid}/download"),
+                                        &token,
+                                    )
+                                    .await
+                                    {
+                                        Ok(bytes) => code.set(Some(
+                                            String::from_utf8_lossy(&bytes).into_owned(),
+                                        )),
+                                        Err(e) => crate::alerts::show_alert(
+                                            crate::alerts::AlertKind::Error,
+                                            e,
+                                        ),
+                                    }
+                                });
+                            }
+                        },
+                        "{i18n::tr(&lang, \"код\", \"code\")}"
+                    }
                 }
             }
 
@@ -307,17 +320,14 @@ fn SubmissionDetail(props: SubmissionDetailProps) -> Element {
                         }
                     }
                     }
-                } else if let Some(text) = code_block {
+                } else if let Some(text) = code_block.filter(|_| show_code) {
                     // Скроллится только код внутри блока (шапка с языком
                     // и кнопкой копирования остаётся на месте).
                     div { class: "md-code-scroll",
                         Markdown { text: text }
                     }
-                } else {
-                    div { class: "flex flex-col justify-center items-center gap-3 py-8",
-                        span { class: "loading loading-spinner loading-lg" }
-                        p { class: "italic", "{i18n::tr(&lang, \"загрузка\", \"loading\")}" }
-                    }
+                } else if show_code {
+                    Loading {}
                 }
             }
         }

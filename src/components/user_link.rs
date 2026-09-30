@@ -2,7 +2,7 @@ use dioxus::prelude::*;
 
 use crate::models::users::AdminLevel;
 
-use super::icon::{icon_element, Icon};
+use super::icon::{Icon, icon_element};
 
 /// A person-named button that navigates to a user's profile. Owners are taken
 /// to the private profile page, everyone else to the public one (mirrors

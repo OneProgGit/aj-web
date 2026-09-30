@@ -14,18 +14,27 @@ pub async fn login(login: &str, password: &str) -> Result<String, String> {
         .json(&body)
         .send()
         .await
-        .map_err(|e| format!("{}: {e}", crate::i18n::tr(&crate::state::language(), "Сетевая ошибка", "Network error")))?;
+        .map_err(|e| {
+            format!(
+                "{}: {e}",
+                crate::i18n::tr(&crate::state::language(), "Сетевая ошибка", "Network error")
+            )
+        })?;
     if res.status().is_success() {
-        let token = res
-            .text()
-            .await
-            .map_err(|e| format!("{}: {e}", crate::i18n::tr(&crate::state::language(), "Ошибка ответа", "Response error")))?;
+        let token = res.text().await.map_err(|e| {
+            format!(
+                "{}: {e}",
+                crate::i18n::tr(&crate::state::language(), "Ошибка ответа", "Response error")
+            )
+        })?;
         Ok(token.trim_matches('"').to_string())
     } else {
-        let error: crate::models::errors::AdaJudgeError = res
-            .json()
-            .await
-            .map_err(|e| format!("{}: {e}", crate::i18n::tr(&crate::state::language(), "Ошибка сервера", "Server error")))?;
+        let error: crate::models::errors::AdaJudgeError = res.json().await.map_err(|e| {
+            format!(
+                "{}: {e}",
+                crate::i18n::tr(&crate::state::language(), "Ошибка сервера", "Server error")
+            )
+        })?;
         Err(crate::models::errors::describe_error(&error))
     }
 }
@@ -44,14 +53,21 @@ pub async fn login_cookie(login: &str, password: &str) -> Result<(), String> {
         .json(&body)
         .send()
         .await
-        .map_err(|e| format!("{}: {e}", crate::i18n::tr(&crate::state::language(), "Сетевая ошибка", "Network error")))?;
+        .map_err(|e| {
+            format!(
+                "{}: {e}",
+                crate::i18n::tr(&crate::state::language(), "Сетевая ошибка", "Network error")
+            )
+        })?;
     if res.status().is_success() {
         Ok(())
     } else {
-        let error: crate::models::errors::AdaJudgeError = res
-            .json()
-            .await
-            .map_err(|e| format!("{}: {e}", crate::i18n::tr(&crate::state::language(), "Ошибка сервера", "Server error")))?;
+        let error: crate::models::errors::AdaJudgeError = res.json().await.map_err(|e| {
+            format!(
+                "{}: {e}",
+                crate::i18n::tr(&crate::state::language(), "Ошибка сервера", "Server error")
+            )
+        })?;
         Err(crate::models::errors::describe_error(&error))
     }
 }
@@ -72,14 +88,21 @@ pub async fn register(
         .json(&body)
         .send()
         .await
-        .map_err(|e| format!("{}: {e}", crate::i18n::tr(&crate::state::language(), "Сетевая ошибка", "Network error")))?;
+        .map_err(|e| {
+            format!(
+                "{}: {e}",
+                crate::i18n::tr(&crate::state::language(), "Сетевая ошибка", "Network error")
+            )
+        })?;
     if res.status().is_success() {
         Ok(())
     } else {
-        let error: crate::models::errors::AdaJudgeError = res
-            .json()
-            .await
-            .map_err(|e| format!("{}: {e}", crate::i18n::tr(&crate::state::language(), "Ошибка сервера", "Server error")))?;
+        let error: crate::models::errors::AdaJudgeError = res.json().await.map_err(|e| {
+            format!(
+                "{}: {e}",
+                crate::i18n::tr(&crate::state::language(), "Ошибка сервера", "Server error")
+            )
+        })?;
         Err(crate::models::errors::describe_error(&error))
     }
 }

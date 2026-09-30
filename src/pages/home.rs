@@ -1,13 +1,11 @@
 use dioxus::prelude::*;
 
 use crate::{
-    alerts::{show_alert, AlertKind},
+    alerts::{AlertKind, show_alert},
     api,
     components::{
-        contest_card::ContestCard,
-        contest_form::contest_form,
-        contest_ws::contests_feed_ws,
-        icon::Icon,
+        contest_card::ContestCard, contest_form::contest_form, contest_ws::contests_feed_ws,
+        icon::Icon, loading::Loading,
     },
     i18n,
     models::contests::ContestRequest,
@@ -61,13 +59,17 @@ async fn reload_data(
 pub fn Home() -> Element {
     let lang = crate::state::language();
     let mut modal_open = use_signal(|| false);
-    let mut loaded = use_signal(|| false);
+    // started — запрос пошёл (ровно один раз), loading — он ещё идёт.
+    let mut started = use_signal(|| false);
+    let mut loading = use_signal(|| false);
 
-    if !*loaded.read() {
-        loaded.set(true);
+    if !started() {
+        started.set(true);
+        loading.set(true);
         spawn(async move {
             let all = STATE.read().contests_is_all;
             reload_data(all, true, true, true).await;
+            loading.set(false);
         });
     }
 
@@ -119,7 +121,9 @@ pub fn Home() -> Element {
             }
             }
 
-            if STATE.read().contests.is_empty() {
+            if loading() {
+                Loading {}
+            } else if STATE.read().contests.is_empty() {
                 p { class: "italic", "{i18n::tr(&lang, \"Контестов пока что нет\", \"No contests yet\")}" }
             } else {
                 div { class: "flex flex-col gap-4 w-full max-h-[28rem] overflow-y-auto",

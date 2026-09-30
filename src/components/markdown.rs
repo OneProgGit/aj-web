@@ -1,7 +1,7 @@
 use dioxus::prelude::*;
 use pulldown_cmark::{Options, Parser};
 
-use super::icon::{icon_element, Icon};
+use super::icon::{Icon, icon_element};
 use crate::i18n;
 
 fn render_markdown(text: &str) -> String {
@@ -20,8 +20,14 @@ fn render_markdown(text: &str) -> String {
         let after = &rest[pos + "<code class=\"language-".len()..];
         let end = after.find('"').unwrap_or(after.len());
         let lang = &after[..end];
-        tagged.push_str(&format!("<code data-lang=\"{lang}\" class=\"language-{lang}\""));
-        rest = if end < after.len() { &after[end + 1..] } else { "" };
+        tagged.push_str(&format!(
+            "<code data-lang=\"{lang}\" class=\"language-{lang}\""
+        ));
+        rest = if end < after.len() {
+            &after[end + 1..]
+        } else {
+            ""
+        };
     }
     tagged.push_str(rest);
     // Оборачиваем блоки кода в gutter с номерами строк.

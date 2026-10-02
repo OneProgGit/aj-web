@@ -90,7 +90,7 @@ pub fn Home() -> Element {
 
             if STATE.read().is_admin() {
                 label { class: "label cursor-pointer justify-start gap-2",
-                m3e-checkbox {
+                m3e-switch {
 
                     checked: STATE.read().contests_is_all,
                     onchange: move |_ev| {

@@ -109,7 +109,7 @@ pub fn Submissions(props: SubmissionsProps) -> Element {
                         div { class: "flex items-center gap-4",
                             if all_submissions_allowed {
                                 label { class: "label cursor-pointer justify-start gap-2",
-                                    m3e-checkbox {
+                                    m3e-switch {
 
                                         checked: STATE.read().all_submissions,
                                         onchange: move |_| {

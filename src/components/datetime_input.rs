@@ -32,6 +32,11 @@ pub fn datetime_input(value: DateTime<Utc>, onchange: EventHandler<DateTime<Utc>
     let date_label = crate::i18n::tr(&lang, "дата начала", "start date");
     let ok = crate::i18n::tr(&lang, "ок", "OK");
     let cancel = crate::i18n::tr(&lang, "отмена", "cancel");
+    let select_time = crate::i18n::tr(&lang, "выберите время", "select time");
+    let hour = crate::i18n::tr(&lang, "часы", "hour");
+    let minute = crate::i18n::tr(&lang, "минуты", "minute");
+    let toggle_input = crate::i18n::tr(&lang, "ввести вручную", "toggle input picker");
+    let am_pm = crate::i18n::tr(&lang, "AM или PM", "AM or PM");
 
     let mut date = use_signal(|| local.format("%d.%m.%Y").to_string());
     let mut time = use_signal(|| local.format("%H:%M").to_string());
@@ -56,6 +61,7 @@ pub fn datetime_input(value: DateTime<Utc>, onchange: EventHandler<DateTime<Utc>
     rsx! {
         div { class: "flex flex-wrap items-center gap-2",
             m3e-datepicker {
+                class: "my-1 mr-2",
                 id: DATE_ID,
                 variant: "auto",
                 label: "{date_label}",
@@ -79,6 +85,7 @@ pub fn datetime_input(value: DateTime<Utc>, onchange: EventHandler<DateTime<Utc>
             }
 
             m3e-timepicker {
+                class: "my-1 mr-2",
                 id: TIME_ID,
                 variant: "auto",
                 mode: "dial",
@@ -86,6 +93,11 @@ pub fn datetime_input(value: DateTime<Utc>, onchange: EventHandler<DateTime<Utc>
                 hide_mode_toggle: true,
                 confirm_label: "{ok}",
                 dismiss_label: "{cancel}",
+                dial_label: "{select_time}",
+                hour_label: "{hour}",
+                minute_label: "{minute}",
+                mode_toggle_label: "{toggle_input}",
+                period_toggle_label: "{am_pm}",
                 onchange: move |_| {
                     if let Some(t) = read_date_prop(TIME_ID) {
                         time.set(t.with_timezone(&Local).format("%H:%M").to_string());

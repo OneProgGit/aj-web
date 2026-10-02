@@ -511,8 +511,10 @@ m3e-button.error-text {
     align-items: center;
     justify-content: space-between;
     gap: 0.5rem;
-    padding: 0.5rem 0.8rem 0.4rem;
-    font-size: 0.75em;
+    padding: 0.6rem 0.9rem 0.5rem;
+    /* Имя языка — заметнее: это заголовок блока, а не сноска. */
+    font-size: 0.9rem;
+    font-weight: 500;
     text-transform: uppercase;
     letter-spacing: 0.06em;
     opacity: 0.75;
@@ -524,8 +526,8 @@ m3e-button.error-text {
     --md-sys-color-primary: currentColor;
     --md-sys-color-on-surface: currentColor;
 }
-.md-body .md-code { flex: 1; min-width: 0; }
-.md-body .md-codeblock > pre { margin: 0; padding: 0.8rem; overflow-x: auto; font-family: var(--font-mono, ui-monospace, monospace); font-size: 0.85em; line-height: 1.6; background: none; }
+.md-body .md-code { flex: 1; min-width: 0; font-size: 0.95rem; }
+.md-body .md-codeblock > pre { margin: 0; padding: 0.8rem; overflow-x: auto; font-family: var(--font-mono, ui-monospace, monospace); font-size: 0.95rem; line-height: 1.65; background: none; }
 .md-body .md-code code { background: none; padding: 0; }
 /* Тема highlight.js ставит code независимый скролл — убиваем, скроллит общий контейнер. */
 .md-body .md-code code.hljs { display: block; overflow: visible; padding: 0; }
@@ -661,3 +663,9 @@ m3e-form-field:has(m3e-select) {
 m3e-select {
     min-width: 10rem;
 }
+
+/* --- Токены темы для top-layer (выпадающие панели, меню) ---
+   m3e открывает панели в top layer, то есть вне DOM-поддерева m3e-theme,
+   а CSS-переменные наследуются по дереву, а не по слою. Без этого панель
+   не видит --md-sys-color-* и рисуется светлой (значения по умолчанию).
+   MaterialHost копирует вычисленные токены темы в :root. */

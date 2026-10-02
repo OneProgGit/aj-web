@@ -42,7 +42,7 @@ pub fn DeleteForm(
                         class: "w-full".to_string(),
                     }
                     label { class: "label cursor-pointer justify-start gap-2",
-                        m3e-checkbox {
+                        m3e-switch {
                             class: "text-error",
                             checked: confirmed(),
                             onchange: move |_| confirmed.set(!confirmed()),

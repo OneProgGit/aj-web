@@ -5,10 +5,9 @@ use wasm_bindgen::JsCast;
 use crate::{
     alerts::{AlertKind, show_alert},
     api,
-    components::icon::icon_slot,
     components::{
         contest_card::ContestCard,
-        icon::{Icon, icon_element},
+        icon::{Icon, icon_element, icon_slot},
         loading::Loading,
         problem_card::ProblemCard,
         select::M3Select,

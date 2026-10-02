@@ -226,6 +226,28 @@ pub fn MaterialHost() -> Element {
         el.set_attribute("src", "/m3e.js").ok();
         document.head().and_then(|h| h.append_child(&el).ok());
 
+        // Панели выпадающих списков и меню открываются в top layer — вне
+        // дерева m3e-theme, — поэтому не наследуют его --md-sys-color-*.
+        // Копируем вычисленные токены темы в :root, иначе панели рисуются
+        // светлыми даже в тёмной теме.
+        spawn(async move {
+            gloo_timers::future::TimeoutFuture::new(1200).await;
+            let _ = js_sys::eval(
+                r#"(() => {
+                    const theme = document.querySelector('m3e-theme');
+                    if (!theme) return;
+                    const cs = getComputedStyle(theme);
+                    const root = document.documentElement;
+                    for (let i = 0; i < cs.length; i++) {
+                        const name = cs[i];
+                        if (!name.startsWith('--md-sys-') && !name.startsWith('--m3e-')) continue;
+                        root.style.setProperty(name, cs.getPropertyValue(name));
+                    }
+                    root.style.setProperty('color-scheme', getComputedStyle(document.body).colorScheme);
+                })()"#,
+            );
+        });
+
         spawn(async move {
             gloo_timers::future::TimeoutFuture::new(3000).await;
             let ok = js_sys::eval("(() => !!customElements.get('m3e-button'))()")

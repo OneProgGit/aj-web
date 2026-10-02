@@ -142,7 +142,7 @@ pub fn Problems() -> Element {
 
             if is_owner {
                 label { class: "label cursor-pointer justify-start gap-2",
-                    m3e-checkbox {
+                    m3e-switch {
 
                         checked: all_problems(),
                         onchange: move |_ev| {

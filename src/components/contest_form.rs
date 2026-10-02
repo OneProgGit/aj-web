@@ -101,6 +101,7 @@ pub fn contest_form(
                 span { class: "label-text", "{i18n::tr(&lang, \"продолжительность\", \"duration\")}" }
                 div { class: "flex flex-wrap items-center gap-2",
                     m3e-form-field {
+                        class: "w-20",
                         input {
                             r#type: "number",
                             min: "0",
@@ -110,6 +111,7 @@ pub fn contest_form(
                     }
                     span { class: "text-sm", "{i18n::tr(&lang, \"дн\", \"d\")}" }
                     m3e-form-field {
+                        class: "w-20",
                         input {
                             r#type: "number",
                             min: "0",
@@ -119,6 +121,7 @@ pub fn contest_form(
                     }
                     span { class: "text-sm", "{i18n::tr(&lang, \"ч\", \"h\")}" }
                     m3e-form-field {
+                        class: "w-20",
                         input {
                             r#type: "number",
                             min: "0",
@@ -128,6 +131,7 @@ pub fn contest_form(
                     }
                     span { class: "text-sm", "{i18n::tr(&lang, \"мин\", \"min\")}" }
                     m3e-form-field {
+                        class: "w-20",
                         input {
                             r#type: "number",
                             min: "0",
@@ -180,21 +184,21 @@ pub fn contest_form(
                         }
                     }
                 }
-                label { class: "label cursor-pointer justify-start gap-2",
-                    m3e-checkbox { checked: hidden(), onchange: move |_| hidden.set(!hidden()) }
-                    span { class: "label-text", "{i18n::tr(&lang, \"скрыть\", \"hidden\")}" }
+                div { class: "flex items-center gap-3",
+                    m3e-switch { checked: hidden(), onchange: move |_| hidden.set(!hidden()) }
+                    span { "{i18n::tr(&lang, \"скрыть\", \"hidden\")}" }
                 }
-                label { class: "label cursor-pointer justify-start gap-2",
-                    m3e-checkbox { checked: upsolving(), onchange: move |_| upsolving.set(!upsolving()) }
-                    span { class: "label-text", "{i18n::tr(&lang, \"открыть дорешку\", \"open upsolving\")}" }
+                div { class: "flex items-center gap-3",
+                    m3e-switch { checked: upsolving(), onchange: move |_| upsolving.set(!upsolving()) }
+                    span { "{i18n::tr(&lang, \"открыть дорешку\", \"open upsolving\")}" }
                 }
-                label { class: "label cursor-pointer justify-start gap-2",
-                    m3e-checkbox { checked: hide_solutions(), onchange: move |_| hide_solutions.set(!hide_solutions()) }
-                    span { class: "label-text", "{i18n::tr(&lang, \"скрыть решения\", \"hide solutions\")}" }
+                div { class: "flex items-center gap-3",
+                    m3e-switch { checked: hide_solutions(), onchange: move |_| hide_solutions.set(!hide_solutions()) }
+                    span { "{i18n::tr(&lang, \"скрыть решения\", \"hide solutions\")}" }
                 }
-                label { class: "label cursor-pointer justify-start gap-2",
-                    m3e-checkbox { checked: hide_leaderboard(), onchange: move |_| hide_leaderboard.set(!hide_leaderboard()) }
-                    span { class: "label-text", "{i18n::tr(&lang, \"скрыть таблицу лидеров\", \"hide leaderboard\")}" }
+                div { class: "flex items-center gap-3",
+                    m3e-switch { checked: hide_leaderboard(), onchange: move |_| hide_leaderboard.set(!hide_leaderboard()) }
+                    span { "{i18n::tr(&lang, \"скрыть таблицу лидеров\", \"hide leaderboard\")}" }
                 }
                 m3e-form-field {
                 span { slot: "label", "{i18n::tr(&lang, \"соавторы (через запятую, без пробелов)\", \"co-authors (comma-separated)\")}" }

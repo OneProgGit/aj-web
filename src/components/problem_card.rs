@@ -13,10 +13,7 @@ use crate::{
     state::STATE,
 };
 
-use super::{
-    delete_form::DeleteForm,
-    icon::{Icon, icon_element},
-};
+use super::{delete_form::DeleteForm, icon::Icon};
 
 /// Subgroup mini-card inside a problem card (mirrors `AJSubgroupCard`).
 #[derive(Props, Clone)]
@@ -174,9 +171,10 @@ pub fn ProblemCard(props: ProblemCardProps) -> Element {
                                     "✕"
                                 }
                             }
-                            m3e-button {
-                                variant: "outlined",
-                            {icon_slot(Icon::Upload, 16)}
+                            label { class: "cursor-pointer",
+                                m3e-button {
+                                    variant: "outlined",
+                                {icon_slot(Icon::Upload, 16)}
                             span {
                                 {if let Some((name, _)) = picked_archive() {
                                     format!("{} ({})", i18n::tr(&lang, "выбрать архив", "pick archive"), name)
@@ -216,6 +214,7 @@ pub fn ProblemCard(props: ProblemCardProps) -> Element {
                                 },
                             }
                         }
+                            }
                         div { class: "card-actions justify-end mt-2",
                             m3e-button {
                                 variant: "text",
@@ -241,14 +240,14 @@ pub fn ProblemCard(props: ProblemCardProps) -> Element {
                             }
                             m3e-button {
                                 variant: "filled",
-                                class: "destructive",
+                                class: "error",
                                 onclick: move |_| deleting.set(!deleting()),
                                 {icon_slot(Icon::Trash, 16)}
                                 span { "{i18n::tr(&lang, \"удалить\", \"delete\")}" }
                             }
                             m3e-button {
                                 variant: "filled",
-                                class: "destructive",
+                                class: "error",
                             disabled: picked_archive().is_none(),
                             onclick: {
                                 let archive = picked_archive().map(|(_, b)| b);
@@ -270,7 +269,7 @@ pub fn ProblemCard(props: ProblemCardProps) -> Element {
                                     }
                                 }
                             },
-                            {icon_element(Icon::Pencil, 16)}
+                            {icon_slot(Icon::Pencil, 16)}
                             span { "{i18n::tr(&lang, \"изменить\", \"edit\")}" }
                             }
                         }

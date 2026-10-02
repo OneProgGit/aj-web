@@ -11,6 +11,7 @@ use crate::{
         icon::{Icon, icon_element},
         loading::Loading,
         problem_card::ProblemCard,
+        select::M3Select,
         submissions::Submissions,
     },
     i18n,
@@ -65,11 +66,30 @@ fn problem_selector(
     mut selected_problem: Signal<usize>,
 ) -> Element {
     rsx! {
-        select {
-            class: "select select-bordered select-sm",
+        M3Select {
+            id: "aj-contest-problem",
+            label: crate::i18n::tr(&crate::state::language(), "задача", "problem"),
+            options: problems
+                .iter()
+                .enumerate()
+                .map(|(i, p)| {
+                    (
+                        i.to_string(),
+                        format!(
+                            "#{} {}",
+                            p.index + 1,
+                            crate::i18n::problem_title(
+                                &crate::state::language(),
+                                &p.name_ru,
+                                &p.name_en,
+                            )
+                        ),
+                    )
+                })
+                .collect(),
             value: selected_problem().to_string(),
-            onchange: move |ev| {
-                let idx = ev.value().parse::<usize>().unwrap_or(0);
+            onchange: Callback::new(move |value: String| {
+                let idx = value.parse::<usize>().unwrap_or(0);
                 selected_problem.set(idx);
                 let token = crate::state::token();
                 let all = STATE.read().all_submissions;
@@ -87,14 +107,7 @@ fn problem_selector(
                         }
                     }
                 });
-            },
-            for (i, p) in problems.iter().enumerate() {
-                option {
-                    value: "{i}",
-                    selected: selected_problem() == i,
-                    "#{p.index + 1} {i18n::problem_title(&crate::state::language(), &p.name_ru, &p.name_en)}"
-                }
-            }
+            }),
         }
     }
 }
@@ -210,7 +223,7 @@ pub fn Contest(contest_id: i64) -> Element {
     let lang = crate::state::language();
     let navigator = use_navigator();
     let selected_problem = use_signal(|| 0usize);
-    let mut language_idx = use_signal(|| 0usize);
+    let language_idx = use_signal(|| 0usize);
     let mut solution_bytes = use_signal(|| None::<Vec<u8>>);
     let mut solution_name = use_signal(String::new);
     let mut paste_mode = use_signal(|| false);
@@ -342,18 +355,24 @@ pub fn Contest(contest_id: i64) -> Element {
                             {retest_button(selected.clone(), busy)}
                         }
                         div { class: "flex flex-wrap gap-4 items-center min-h-0",
-                        select {
-                            class: "select select-bordered select-sm",
+                        M3Select {
+                            id: "aj-sub-lang",
+                            label: i18n::tr(&lang, "язык", "language"),
+                            options: vec![
+                                ("0".to_string(), "Rust".to_string()),
+                                ("1".to_string(), "C".to_string()),
+                                ("2".to_string(), "C++".to_string()),
+                                ("3".to_string(), "Go".to_string()),
+                                ("4".to_string(), "Python".to_string()),
+                                ("5".to_string(), "Pascal".to_string()),
+                            ],
                             value: language_idx().to_string(),
-                            onchange: move |ev| {
-                                language_idx.set(ev.value().parse::<usize>().unwrap_or(0));
+                            onchange: {
+                                let mut lang_idx = language_idx;
+                                Callback::new(move |value: String| {
+                                    lang_idx.set(value.parse::<usize>().unwrap_or(0));
+                                })
                             },
-                            option { value: "0", "Rust" }
-                            option { value: "1", "C" }
-                            option { value: "2", "C++" }
-                            option { value: "3", "Go" }
-                            option { value: "4", "Python" }
-                            option { value: "5", "Pascal" }
                         }
 
                         m3e-button {
@@ -363,10 +382,12 @@ pub fn Contest(contest_id: i64) -> Element {
                             span { "{paste_mode_label}" }
                         }
                         if !paste_mode() {
-                            label {
-                                r#for: "solution-file",
-                                {icon_element(Icon::Upload, 16)}
-                                span { "{pick_label}" }
+                            label { class: "cursor-pointer",
+                                m3e-button {
+                                    variant: "outlined",
+                                    {icon_slot(Icon::Upload, 16)}
+                                    span { "{pick_label}" }
+                                }
                             }
                         }
                         input {
@@ -403,12 +424,17 @@ pub fn Contest(contest_id: i64) -> Element {
                         }
 
                         if paste_mode() {
-                            textarea {
-                                class: "textarea textarea-bordered w-full font-mono",
-                                rows: "8",
-                                placeholder: i18n::tr(&lang, "вставьте код решения", "paste solution code"),
-                                value: paste_code(),
-                                oninput: move |ev| paste_code.set(ev.value()),
+                            m3e-form-field {
+                                span { slot: "label",
+                                    "{i18n::tr(&lang, \"код решения\", \"solution code\")}"
+                                }
+                                textarea {
+                                    class: "w-full font-mono min-h-32",
+                                    rows: "8",
+                                    placeholder: i18n::tr(&lang, "вставьте код решения", "paste solution code"),
+                                    value: paste_code(),
+                                    oninput: move |ev| paste_code.set(ev.value()),
+                                }
                             }
                         }
 

@@ -84,6 +84,7 @@ pub fn Account() -> Element {
             }
 
             m3e-button {
+                class: "error",
                 variant: "filled",
                 onclick: move |_| deleting.set(!deleting()),
                 {icon_slot(Icon::Trash, 16)}

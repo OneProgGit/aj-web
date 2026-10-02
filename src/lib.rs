@@ -13,6 +13,7 @@ use dioxus::router::Link;
 
 use crate::{
     alerts::AlertHost,
+    components::select::M3Select,
     pages::{
         account_profile::Account, contest::Contest, home::Home, login::Login, problems::Problems,
         register::Register, user_private_profile::UserPrivateProfile, user_profile::UserProfile,
@@ -141,16 +142,18 @@ fn GuardLayout() -> Element {
                     }
                 }
                 div { class: "flex-1" }
-                select {
-                    class: "select select-ghost select-sm bg-base-200",
-                    value: "{lang}",
-                    onchange: move |ev| {
-                        let value = ev.value();
+                M3Select {
+                    id: "aj-ui-lang",
+                    label: i18n::tr(&lang, "язык", "language"),
+                    options: vec![
+                        ("ru".to_string(), i18n::tr(&lang, "русский", "russian")),
+                        ("en".to_string(), "english".to_string()),
+                    ],
+                    value: lang.clone(),
+                    onchange: Callback::new(|value: String| {
                         STATE.write().language = value.clone();
                         crate::state::save_language(&value);
-                    },
-                    option { value: "ru", "русский" }
-                    option { value: "en", "english" }
+                    }),
                 }
             }
         }

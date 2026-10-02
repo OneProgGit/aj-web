@@ -6,7 +6,7 @@ use crate::{
     components::icon::icon_slot,
     components::{
         admin_badge::AdminBadge, datetime_text::DateTimeText, delete_form::DeleteForm, icon::Icon,
-        loading::Loading,
+        loading::Loading, select::M3Select,
     },
     i18n,
     models::{DeletionRequest, users::AdminLevel},
@@ -93,17 +93,24 @@ pub fn UserPrivateProfile(user_id: i64) -> Element {
                     div { class: "card-body gap-3",
                         h3 { class: "card-title text-base", "{i18n::tr(&lang, \"Уровень админа\", \"Admin level\")}" }
                         div { class: "flex flex-wrap gap-4 items-center",
-                            select {
-                        class: "select select-bordered select-sm",
-                        value: level_idx().to_string(),
-                        onchange: move |ev| level_idx.set(ev.value().parse::<usize>().unwrap_or(0)),
-                        option { value: "0", "{i18n::tr(&lang, \"пользователь\", \"user\")}" }
-                        option { value: "1", "{i18n::tr(&lang, \"админ\", \"admin\")}" }
-                        option { value: "2", "{i18n::tr(&lang, \"владелец\", \"owner\")}" }
-                    }
+                            M3Select {
+                                id: "aj-user-level",
+                                label: i18n::tr(&lang, "уровень", "level"),
+                                options: vec![
+                                    ("0".to_string(), i18n::tr(&lang, "пользователь", "user")),
+                                    ("1".to_string(), i18n::tr(&lang, "админ", "admin")),
+                                    ("2".to_string(), i18n::tr(&lang, "владелец", "owner")),
+                                ],
+                                value: level_idx().to_string(),
+                                onchange: {
+                                    let mut idx = level_idx;
+                                    Callback::new(move |value: String| {
+                                        idx.set(value.parse::<usize>().unwrap_or(0));
+                                    })
+                                },
+                            }
                     m3e-button {
                         variant: "filled",
-                        class: "destructive",
                         disabled: busy(),
                         onclick: {
                             let token = STATE.read().token.clone();
@@ -152,6 +159,7 @@ pub fn UserPrivateProfile(user_id: i64) -> Element {
                 }
 
                 m3e-button {
+                    class: "error",
                     variant: "filled",
                     onclick: move |_| deleting.set(!deleting()),
                     {icon_slot(Icon::Trash, 16)}

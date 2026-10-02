@@ -294,28 +294,59 @@ fn SubmissionDetail(props: SubmissionDetailProps) -> Element {
             div { class: "flex flex-col gap-2",
                 if tab() == 0 {
                     div { class: "flex flex-col gap-2 max-h-96 overflow-y-auto",
-                    for (i, r) in submission.subgroups_results.iter().enumerate() {
-                        div { class: "bg-base-300 rounded p-4 text-base-content",
-                            p { class: "font-medium", "##{i}" }
-                            div { class: "flex justify-between", span { class: "text-sm", "{i18n::tr(&lang, \"вердикт\", \"verdict\")}" }, span { class: "text-sm italic font-medium border border-neutral/50 rounded px-2 py-0.5", "{crate::i18n::subgroup_verdict_text(&lang, &r.verdict)}" } }
-                            div { class: "flex justify-between", span { class: "text-sm", "{i18n::tr(&lang, \"тест\", \"test\")}" }, span { class: "text-sm italic", "{r.test}" } }
-                            if let Some(score) = r.score {
-                                div { class: "flex justify-between", span { class: "text-sm", "{i18n::tr(&lang, \"баллы\", \"score\")}" }, span { class: "text-sm italic", "{score}" } }
+                        for (i, r) in submission.subgroups_results.iter().enumerate() {
+                            m3e-card {
+                                variant: "filled",
+                                class: "w-full",
+                                div { slot: "header",
+                                    span { class: "font-medium", "##{i}" }
+                                }
+                                div { slot: "content",
+                                    div { class: "flex flex-col gap-1",
+                                        div { class: "flex justify-between gap-4",
+                                            span { class: "text-sm", "{i18n::tr(&lang, \"вердикт\", \"verdict\")}" }
+                                            span { class: "text-sm font-medium", "{crate::i18n::subgroup_verdict_text(&lang, &r.verdict)}" }
+                                        }
+                                        div { class: "flex justify-between gap-4",
+                                            span { class: "text-sm", "{i18n::tr(&lang, \"тест\", \"test\")}" }
+                                            span { class: "text-sm font-medium", "{r.test}" }
+                                        }
+                                        if let Some(score) = r.score {
+                                            div { class: "flex justify-between gap-4",
+                                                span { class: "text-sm", "{i18n::tr(&lang, \"баллы\", \"score\")}" }
+                                                span { class: "text-sm font-medium", "{score}" }
+                                            }
+                                        }
+                                    }
+                                }
                             }
                         }
-                    }
                     }
                 } else if tab() == 1 {
                     div { class: "flex flex-col gap-2 max-h-96 overflow-y-auto",
-                    for (i, t) in submission.tests_results.iter().enumerate() {
-                        div { class: "bg-base-300 rounded p-4 text-base-content",
-                            p { class: "font-medium", "##{i + 1}" }
-                            div { class: "flex justify-between", span { class: "text-sm", "{i18n::tr(&lang, \"вердикт\", \"verdict\")}" }, span { class: "text-sm italic font-medium border border-neutral/50 rounded px-2 py-0.5", "{crate::i18n::test_verdict_text(&lang, &t.verdict)}" } }
-                            if let Some(score) = t.score {
-                                div { class: "flex justify-between", span { class: "text-sm", "{i18n::tr(&lang, \"баллы\", \"score\")}" }, span { class: "text-sm italic", "{score}" } }
+                        for (i, t) in submission.tests_results.iter().enumerate() {
+                            m3e-card {
+                                variant: "filled",
+                                class: "w-full",
+                                div { slot: "header",
+                                    span { class: "font-medium", "##{i + 1}" }
+                                }
+                                div { slot: "content",
+                                    div { class: "flex flex-col gap-1",
+                                        div { class: "flex justify-between gap-4",
+                                            span { class: "text-sm", "{i18n::tr(&lang, \"вердикт\", \"verdict\")}" }
+                                            span { class: "text-sm font-medium", "{crate::i18n::test_verdict_text(&lang, &t.verdict)}" }
+                                        }
+                                        if let Some(score) = t.score {
+                                            div { class: "flex justify-between gap-4",
+                                                span { class: "text-sm", "{i18n::tr(&lang, \"баллы\", \"score\")}" }
+                                                span { class: "text-sm font-medium", "{score}" }
+                                            }
+                                        }
+                                    }
+                                }
                             }
                         }
-                    }
                     }
                 } else if let Some(text) = code_block.filter(|_| show_code) {
                     // Скроллится только код внутри блока (шапка с языком

@@ -4,7 +4,7 @@ use crate::{
     alerts::{AlertKind, show_alert},
     api,
     components::icon::icon_slot,
-    components::{icon::Icon, markdown::MdField, question_card::QuestionCard},
+    components::{icon::Icon, markdown::MdField, question_card::QuestionCard, select::M3Select},
     i18n,
     models::problems::ProblemQuestionRequest,
     state::STATE,
@@ -14,7 +14,7 @@ use crate::{
 pub fn ContestQuestions(contest_id: i64) -> Element {
     let lang = crate::state::language();
     let mut modal_open = use_signal(|| false);
-    let mut problem_idx = use_signal(|| 0usize);
+    let problem_idx = use_signal(|| 0usize);
     let mut title = use_signal(String::new);
     let text = use_signal(String::new);
 
@@ -107,14 +107,30 @@ pub fn ContestQuestions(contest_id: i64) -> Element {
                             m3e-icon-button { onclick: move |_| modal_open.set(false), "✕" }
                         }
                         div { class: "flex flex-col gap-3 mt-4",
-                            span { class: "label-text", "{i18n::tr(&lang, \"задача\", \"problem\")}" }
-                            select {
-                                class: "select select-bordered select-sm",
+                            M3Select {
+                                id: "aj-question-problem",
+                                label: i18n::tr(&lang, "задача", "problem"),
+                                options: problems
+                                    .iter()
+                                    .enumerate()
+                                    .map(|(i, p)| {
+                                        (
+                                            i.to_string(),
+                                            format!(
+                                                "#{} {}",
+                                                p.index + 1,
+                                                i18n::problem_title(&lang, &p.name_ru, &p.name_en),
+                                            ),
+                                        )
+                                    })
+                                    .collect(),
                                 value: problem_idx().to_string(),
-                                onchange: move |ev| problem_idx.set(ev.value().parse::<usize>().unwrap_or(0)),
-                                for (i, p) in problems.iter().enumerate() {
-                                    option { value: "{i}", "#{p.index + 1} {i18n::problem_title(&lang, &p.name_ru, &p.name_en)}" }
-                                }
+                                onchange: {
+                                    let mut idx = problem_idx;
+                                    Callback::new(move |value: String| {
+                                        idx.set(value.parse::<usize>().unwrap_or(0));
+                                    })
+                                },
                             }
                             m3e-form-field {
                             span { slot: "label", "{i18n::tr(&lang, \"название\", \"title\")}" }

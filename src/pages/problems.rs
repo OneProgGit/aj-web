@@ -59,8 +59,9 @@ pub fn Problems() -> Element {
                 label { class: "cursor-pointer",
                     m3e-button {
                         variant: "text",
-                    {icon_slot(if picked().is_some() { Icon::Pencil } else { Icon::Upload }, 16)}
-                    span { "{pick_label}" }
+                        {icon_slot(if picked().is_some() { Icon::Pencil } else { Icon::Upload }, 16)}
+                        span { "{pick_label}" }
+                    }
                     input {
                         r#type: "file",
                         class: "hidden",
@@ -76,13 +77,21 @@ pub fn Problems() -> Element {
                             if let Some(file) = file {
                                 let name = file.name();
                                 spawn(async move {
-                                    let buffer = wasm_bindgen_futures::JsFuture::from(file.array_buffer()).await;
+                                    let buffer =
+                                        wasm_bindgen_futures::JsFuture::from(file.array_buffer()).await;
                                     match buffer {
                                         Ok(b) => {
                                             let view = js_sys::Uint8Array::new(&b);
                                             picked.set(Some((name, view.to_vec())));
                                         }
-                                        Err(_) => show_alert(AlertKind::Error, crate::i18n::tr(&crate::state::language(), "Не удалось прочитать файл", "Could not read file")),
+                                        Err(_) => show_alert(
+                                            AlertKind::Error,
+                                            crate::i18n::tr(
+                                                &crate::state::language(),
+                                                "Не удалось прочитать файл",
+                                                "Could not read file",
+                                            ),
+                                        ),
                                     }
                                 });
                             }
@@ -91,7 +100,6 @@ pub fn Problems() -> Element {
                             }
                         },
                     }
-                }
                 }
 
                 m3e-button {

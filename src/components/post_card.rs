@@ -82,8 +82,8 @@ pub fn PostCard(props: PostCardProps) -> Element {
                             span { "{i18n::tr(&lang, \"изменить\", \"edit\")}" }
                         }
                         m3e-button {
+                            class: "error-text",
                             variant: "text",
-                            class: "destructive-text",
                             onclick: move |_| deleting.set(!deleting()),
                             {icon_slot(Icon::Trash, 16)}
                             span { "{i18n::tr(&lang, \"удалить\", \"delete\")}" }

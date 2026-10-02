@@ -100,9 +100,11 @@ pub fn Markdown(text: String) -> Element {
                     if (block.querySelector('.md-copy-btn')) return;
                     const head = block.querySelector('.md-codehead');
                     if (!head) return;
-                    const btn = document.createElement('button');
-                    btn.textContent = '{copy_label}';
+                    // Кнопка в стиле M3 (text-вариант), а не «голый» <button>.
+                    const btn = document.createElement('m3e-button');
+                    btn.setAttribute('variant', 'text');
                     btn.className = 'md-copy-btn';
+                    btn.textContent = '{copy_label}';
                     btn.onclick = () => {{
                         const code = block.querySelector('code');
                         if (code) navigator.clipboard.writeText(code.innerText);
@@ -144,10 +146,13 @@ pub fn MdField(value: Signal<String>, label: String) -> Element {
                 Markdown { text: value() }
             }
         } else {
-            textarea {
-                class: "textarea textarea-bordered w-full",
-                value: value(),
-                oninput: move |ev| value.set(ev.value()),
+            m3e-form-field {
+                span { slot: "label", "{label}" }
+                textarea {
+                    class: "w-full font-mono min-h-24",
+                    value: value(),
+                    oninput: move |ev| value.set(ev.value()),
+                }
             }
         }
     }

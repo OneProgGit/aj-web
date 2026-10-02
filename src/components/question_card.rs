@@ -128,8 +128,8 @@ pub fn QuestionCard(props: QuestionCardProps) -> Element {
                     }
                     if can_delete {
                         m3e-button {
+                            class: "error-text",
                             variant: "text",
-                            class: "destructive-text",
                             onclick: move |_| deleting.set(!deleting()),
                             {icon_slot(Icon::Trash, 16)}
                             span { "{i18n::tr(&lang, \"удалить\", \"delete\")}" }

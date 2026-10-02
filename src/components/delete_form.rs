@@ -56,8 +56,8 @@ pub fn DeleteForm(
                             span { "{crate::i18n::tr(&crate::state::language(), \"отменить\", \"cancel\")}" }
                         }
                         m3e-button {
+                            class: "error",
                             variant: "filled",
-                            class: "destructive",
                             disabled: !(!login().is_empty() && !password().is_empty() && confirmed()),
                             onclick: {
                                 let on_delete = on_delete;

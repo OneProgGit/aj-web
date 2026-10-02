@@ -152,6 +152,22 @@ pub fn token() -> Option<String> {
     STATE.read().token.clone()
 }
 
+/// 403 — это не ошибка UI, а штатное «нет доступа»: сервер отдаёт его,
+/// например, на объявления скрытого или ещё не начавшегося контеста,
+/// если пользователь не его владелец (админ без уровня Owner — тоже).
+/// Такие случаи не должны выскакивать тостом.
+#[must_use]
+pub fn is_forbidden(err: &str) -> bool {
+    err.contains("Forbidden") || err.contains("Доступ запрещён")
+}
+
+/// Показать ошибку, пропустив «нет доступа».
+pub fn show_error(err: String) {
+    if !is_forbidden(&err) {
+        crate::alerts::show_alert(crate::alerts::AlertKind::Error, err);
+    }
+}
+
 pub fn save_token(token: &str) {
     let window = web_sys::window();
     let Some(storage) = window.and_then(|w| w.local_storage().ok().flatten()) else {

@@ -3,11 +3,8 @@ use dioxus::prelude::*;
 use crate::{
     alerts::{AlertKind, show_alert},
     api,
-    components::{
-        icon::{Icon, icon_element},
-        markdown::MdField,
-        question_card::QuestionCard,
-    },
+    components::icon::icon_slot,
+    components::{icon::Icon, markdown::MdField, question_card::QuestionCard},
     i18n,
     models::problems::ProblemQuestionRequest,
     state::STATE,
@@ -75,10 +72,10 @@ pub fn ContestQuestions(contest_id: i64) -> Element {
             div { class: "flex flex-wrap gap-4 items-center",
                 h1 { class: "text-2xl font-bold", "{i18n::tr(&lang, \"Вопросы по задачам\", \"Problem questions\")}" }
 
-                button {
-                    class: "btn btn-neutral btn-sm gap-1",
+                m3e-button {
+                    variant: "tonal",
                     onclick: move |_| modal_open.set(true),
-                    {icon_element(Icon::QuestionMark, 16)}
+                    {icon_slot(Icon::QuestionMark, 16)}
                     span { "{i18n::tr(&lang, \"задать вопрос\", \"ask question\")}" }
                 }
             }
@@ -107,7 +104,7 @@ pub fn ContestQuestions(contest_id: i64) -> Element {
                     div { class: "modal-box max-w-2xl",
                         div { class: "flex items-center justify-between",
                             h3 { class: "card-title", "{i18n::tr(&lang, \"Задать вопрос\", \"Ask a question\")}" }
-                            button { class: "btn btn-sm btn-circle btn-ghost", onclick: move |_| modal_open.set(false), "✕" }
+                            m3e-icon-button { onclick: move |_| modal_open.set(false), "✕" }
                         }
                         div { class: "flex flex-col gap-3 mt-4",
                             span { class: "label-text", "{i18n::tr(&lang, \"задача\", \"problem\")}" }
@@ -119,24 +116,25 @@ pub fn ContestQuestions(contest_id: i64) -> Element {
                                     option { value: "{i}", "#{p.index + 1} {i18n::problem_title(&lang, &p.name_ru, &p.name_en)}" }
                                 }
                             }
-                            span { class: "label-text", "{i18n::tr(&lang, \"название\", \"title\")}" }
-                            input {
-                                class: "input input-bordered",
-                                value: title(),
-                                oninput: move |ev| title.set(ev.value()),
+                            m3e-form-field {
+                            span { slot: "label", "{i18n::tr(&lang, \"название\", \"title\")}" }
+                                input {
+                                    value: title(),
+                                    oninput: move |ev| title.set(ev.value()),
+                                }
                             }
                             MdField {
                                 value: text,
                                 label: i18n::tr(&lang, "текст", "text"),
                             }
                             div { class: "card-actions justify-end",
-                                button {
-                                    class: "btn btn-ghost btn-sm gap-1",
+                                m3e-button {
+                                    variant: "text",
                                     onclick: move |_| modal_open.set(false),
                                     span { "{i18n::tr(&lang, \"отменить\", \"cancel\")}" }
                                 }
-                                button {
-                                    class: "btn btn-primary btn-sm gap-1",
+                                m3e-button {
+                                    variant: "filled",
                                     disabled: !valid || problems.is_empty(),
                                     onclick: {
                                         move |_| {
@@ -154,7 +152,7 @@ pub fn ContestQuestions(contest_id: i64) -> Element {
                                             });
                                         }
                                     },
-                                    {icon_element(if valid { Icon::Plus } else { Icon::CircleBackslash }, 16)}
+                                    {icon_slot(if valid { Icon::Plus } else { Icon::CircleBackslash }, 16)}
                                     span { "{i18n::tr(&lang, \"задать вопрос\", \"ask question\")}" }
                                 }
                             }

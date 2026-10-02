@@ -5,6 +5,7 @@ use wasm_bindgen::JsCast;
 use crate::{
     alerts::{AlertKind, show_alert},
     api,
+    components::icon::icon_slot,
     components::{
         contest_card::ContestCard,
         icon::{Icon, icon_element},
@@ -82,7 +83,7 @@ fn problem_selector(
                         };
                         match res {
                             Ok(subs) => STATE.write().submissions = subs,
-                            Err(e) => show_alert(AlertKind::Error, e),
+                            Err(e) => crate::state::show_error(e),
                         }
                     }
                 });
@@ -103,8 +104,8 @@ fn retest_button(selected: Option<PublicProblemConfig>, mut busy: Signal<bool>) 
     let lang = crate::state::language();
     rsx! {
         if selected.as_ref().is_some_and(|p| STATE.read().can_manage_problem(p)) {
-            button {
-                class: "btn btn-ghost btn-sm gap-1",
+            m3e-button {
+                variant: "text",
                 disabled: busy(),
                 onclick: {
                     let token = STATE.read().token.clone();
@@ -130,7 +131,7 @@ fn retest_button(selected: Option<PublicProblemConfig>, mut busy: Signal<bool>) 
                         });
                     }
                 },
-                {icon_element(Icon::Update, 16)}
+                {icon_slot(Icon::Update, 16)}
                 span { "{i18n::tr(&lang, \"ретест\", \"retest\")}" }
             }
         }
@@ -148,7 +149,7 @@ async fn load_contest_state(
     if force_data {
         match api::problems::get_contest_problems(contest_id, &token).await {
             Ok(list) => STATE.write().contest_problems = list,
-            Err(e) => show_alert(AlertKind::Error, e),
+            Err(e) => crate::state::show_error(e),
         }
     }
 
@@ -161,18 +162,18 @@ async fn load_contest_state(
         };
         match res {
             Ok(subs) => STATE.write().submissions = subs,
-            Err(e) => show_alert(AlertKind::Error, e),
+            Err(e) => crate::state::show_error(e),
         }
     }
 
     if force_data {
         match api::contests::get_contest_leaderboard(contest_id, &token).await {
             Ok(rows) => STATE.write().leaderboard = rows,
-            Err(e) => show_alert(AlertKind::Error, e),
+            Err(e) => crate::state::show_error(e),
         }
         match api::contests::get_contest_posts(contest_id, &token).await {
             Ok(posts) => STATE.write().posts = posts,
-            Err(e) => show_alert(AlertKind::Error, e),
+            Err(e) => crate::state::show_error(e),
         }
         match api::contests::get_contest(contest_id, &token).await {
             Ok(contest) => {
@@ -183,7 +184,7 @@ async fn load_contest_state(
                     state.contests.push(contest);
                 }
             }
-            Err(e) => show_alert(AlertKind::Error, e),
+            Err(e) => crate::state::show_error(e),
         }
         let can_manage = {
             let state = STATE.read();
@@ -199,7 +200,7 @@ async fn load_contest_state(
         };
         match questions {
             Ok(questions) => STATE.write().questions = questions,
-            Err(e) => show_alert(AlertKind::Error, e),
+            Err(e) => crate::state::show_error(e),
         }
     }
 }
@@ -286,10 +287,10 @@ pub fn Contest(contest_id: i64) -> Element {
     rsx! {
         div { class: "flex flex-col gap-4 max-w-7xl mx-auto w-full contest-page", style: "height: calc(100vh - 12rem); height: calc(100dvh - 12rem); min-height: 28rem;",
             div { class: "flex flex-wrap gap-4 items-center",
-                button {
-                    class: "btn btn-ghost btn-sm gap-2",
+                m3e-button {
+                    variant: "text",
                     onclick: move |_| { let _ = navigator.push(crate::Route::Home {}); },
-                    {icon_element(Icon::Back, 16)}
+                    {icon_slot(Icon::Back, 16)}
                     span { "{i18n::tr(&lang, \"назад\", \"back\")}" }
                 }
 
@@ -355,16 +356,15 @@ pub fn Contest(contest_id: i64) -> Element {
                             option { value: "5", "Pascal" }
                         }
 
-                        button {
-                            class: "btn btn-ghost btn-sm gap-1",
+                        m3e-button {
+                            variant: "text",
                             onclick: move |_| paste_mode.set(!paste_mode()),
-                            {icon_element(if paste_mode() { Icon::Upload } else { Icon::Pencil }, 16)}
+                            {icon_slot(if paste_mode() { Icon::Upload } else { Icon::Pencil }, 16)}
                             span { "{paste_mode_label}" }
                         }
                         if !paste_mode() {
                             label {
                                 r#for: "solution-file",
-                                class: "btn btn-ghost btn-sm gap-1",
                                 {icon_element(Icon::Upload, 16)}
                                 span { "{pick_label}" }
                             }
@@ -412,8 +412,8 @@ pub fn Contest(contest_id: i64) -> Element {
                             }
                         }
 
-                        button {
-                            class: "btn btn-primary btn-sm gap-1",
+                        m3e-button {
+                            variant: "filled",
                             disabled: busy()
                                 || if paste_mode() {
                                     paste_code().trim().is_empty()
@@ -466,7 +466,7 @@ pub fn Contest(contest_id: i64) -> Element {
                                     });
                                 }
                             },
-                            {icon_element(Icon::PaperPlane, 16)}
+                            {icon_slot(Icon::PaperPlane, 16)}
                             span { "{i18n::tr(&lang, \"отослать\", \"send\")}" }
                         }
                         }
@@ -505,7 +505,7 @@ pub fn Contest(contest_id: i64) -> Element {
                                                 state.contests.push(fresh);
                                             }
                                         }
-                                        Err(e) => show_alert(AlertKind::Error, e),
+                                        Err(e) => crate::state::show_error(e),
                                     }
                                 });
                             },

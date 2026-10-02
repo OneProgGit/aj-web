@@ -79,10 +79,10 @@ pub fn Home() -> Element {
                 h2 { class: "text-2xl font-bold", "{i18n::tr(&lang, \"Контесты\", \"Contests\")}" }
 
                 if STATE.read().is_admin() {
-                    button {
-                        class: "btn btn-neutral btn-sm gap-1",
+                    m3e-button {
+                        variant: "tonal",
                         onclick: move |_| modal_open.set(true),
-                        {crate::components::icon::icon_element(Icon::Plus, 16)}
+                        {crate::components::icon::icon_slot(Icon::Plus, 16)}
                         span { "{i18n::tr(&lang, \"создать\", \"create\")}" }
                     }
                 }
@@ -90,12 +90,11 @@ pub fn Home() -> Element {
 
             if STATE.read().is_admin() {
                 label { class: "label cursor-pointer justify-start gap-2",
-                input {
-                    r#type: "checkbox",
-                    class: "checkbox checkbox-sm",
+                m3e-checkbox {
+
                     checked: STATE.read().contests_is_all,
-                    onchange: move |ev| {
-                        let new_value = ev.checked();
+                    onchange: move |_ev| {
+                        let new_value = !STATE.read().contests_is_all;
                         STATE.write().contests_is_all = new_value;
                         let token = crate::state::token();
                         spawn(async move {
@@ -148,8 +147,7 @@ pub fn Home() -> Element {
                     div { class: "modal-box max-w-2xl",
                         div { class: "flex items-center justify-between",
                             h3 { class: "card-title", "{i18n::tr(&lang, \"Создать контест\", \"Create contest\")}" }
-                            button {
-                                class: "btn btn-sm btn-circle btn-ghost",
+                            m3e-icon-button {
                                 onclick: move |_| modal_open.set(false),
                                 "✕",
                             }

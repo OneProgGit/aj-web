@@ -25,7 +25,9 @@ pub fn VerdictBadge(verdict: TestingVerdict) -> Element {
         ),
         TestingVerdict::Ok => (
             "badge badge-success px-4 rounded-lg whitespace-nowrap",
-            verdict.to_string(),
+            // Название вердикта приходит из библиотеки латиницей ("Ok"),
+            // поэтому подписываем явно.
+            crate::i18n::tr(&lang, "Полное решение", "Full solution"),
             false,
         ),
         TestingVerdict::PartialSolution => (

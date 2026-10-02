@@ -3,11 +3,9 @@ use dioxus::prelude::*;
 use crate::{
     alerts::{AlertKind, show_alert},
     api,
+    components::icon::icon_slot,
     components::{
-        admin_badge::AdminBadge,
-        datetime_text::DateTimeText,
-        delete_form::DeleteForm,
-        icon::{Icon, icon_element},
+        admin_badge::AdminBadge, datetime_text::DateTimeText, delete_form::DeleteForm, icon::Icon,
         loading::Loading,
     },
     i18n,
@@ -52,12 +50,12 @@ pub fn UserPrivateProfile(user_id: i64) -> Element {
 
     rsx! {
         div { class: "flex flex-col items-start gap-4 max-w-7xl mx-auto w-full",
-            button {
-                class: "btn btn-ghost btn-sm gap-2",
+            m3e-button {
+                variant: "text",
                 onclick: move |_| {
                     navigator.go_back();
                 },
-                {icon_element(Icon::Back, 16)}
+                {icon_slot(Icon::Back, 16)}
                 span { "{i18n::tr(&lang, \"назад\", \"back\")}" }
             }
 
@@ -103,8 +101,9 @@ pub fn UserPrivateProfile(user_id: i64) -> Element {
                         option { value: "1", "{i18n::tr(&lang, \"админ\", \"admin\")}" }
                         option { value: "2", "{i18n::tr(&lang, \"владелец\", \"owner\")}" }
                     }
-                    button {
-                        class: "btn btn-primary btn-sm gap-1",
+                    m3e-button {
+                        variant: "filled",
+                        class: "destructive",
                         disabled: busy(),
                         onclick: {
                             let token = STATE.read().token.clone();
@@ -145,17 +144,17 @@ pub fn UserPrivateProfile(user_id: i64) -> Element {
                                 });
                             }
                         },
-                        {icon_element(Icon::Pencil, 16)}
+                        {icon_slot(Icon::Pencil, 16)}
                         span { "{i18n::tr(&lang, \"изменить\", \"edit\")}" }
                     }
                     }
                     }
                 }
 
-                button {
-                    class: "btn btn-error btn-sm gap-1",
+                m3e-button {
+                    variant: "filled",
                     onclick: move |_| deleting.set(!deleting()),
-                    {icon_element(Icon::Trash, 16)}
+                    {icon_slot(Icon::Trash, 16)}
                     span { "{i18n::tr(&lang, \"удалить аккаунт\", \"delete account\")}" }
                 }
 

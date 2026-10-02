@@ -1,16 +1,15 @@
 use dioxus::prelude::*;
 
 use crate::{
-    api, i18n,
+    api,
+    components::icon::icon_slot,
+    i18n,
     models::{DeletionRequest, contests::PublicContestConfig},
     state::{ContestStatus, STATE, contest_status},
 };
 
 use super::{
-    contest_form::contest_form,
-    datetime_text::DateTimeText,
-    delete_form::DeleteForm,
-    icon::{Icon, icon_element},
+    contest_form::contest_form, datetime_text::DateTimeText, delete_form::DeleteForm, icon::Icon,
 };
 
 /// Total duration in human units (`3 дн 2 ч`), no seconds.
@@ -143,34 +142,34 @@ pub fn ContestCard(props: ContestCardProps) -> Element {
                 if has_url {
                     div { class: "flex flex-wrap gap-2",
                         if lang == "ru" && !contest.statements_url_ru.is_empty() {
-                            button {
-                                class: "btn btn-neutral btn-sm gap-1",
+                            m3e-button {
+                                variant: "tonal",
                                 onclick: move |_| crate::state::open_link(&statements_ru),
-                                {icon_element(Icon::FileText, 14)}
+                                {icon_slot(Icon::FileText, 14)}
                                 span { "{i18n::tr(&lang, \"условия задач\", \"statements\")}" }
                             }
                         }
                         if lang == "ru" && !contest.editorial_url_ru.is_empty() {
-                            button {
-                                class: "btn btn-neutral btn-sm gap-1",
+                            m3e-button {
+                                variant: "tonal",
                                 onclick: move |_| crate::state::open_link(&editorial_ru),
-                                {icon_element(Icon::FileText, 14)}
+                                {icon_slot(Icon::FileText, 14)}
                                 span { "{i18n::tr(&lang, \"разбор задач\", \"editorial\")}" }
                             }
                         }
                         if lang == "en" && !contest.statements_url_en.is_empty() {
-                            button {
-                                class: "btn btn-neutral btn-sm gap-1",
+                            m3e-button {
+                                variant: "tonal",
                                 onclick: move |_| crate::state::open_link(&statements_en),
-                                {icon_element(Icon::FileText, 14)}
+                                {icon_slot(Icon::FileText, 14)}
                                 span { "{i18n::tr(&lang, \"условия задач\", \"statements\")}" }
                             }
                         }
                         if lang == "en" && !contest.editorial_url_en.is_empty() {
-                            button {
-                                class: "btn btn-neutral btn-sm gap-1",
+                            m3e-button {
+                                variant: "tonal",
                                 onclick: move |_| crate::state::open_link(&editorial_en),
-                                {icon_element(Icon::FileText, 14)}
+                                {icon_slot(Icon::FileText, 14)}
                                 span { "{i18n::tr(&lang, \"разбор задач\", \"editorial\")}" }
                             }
                         }
@@ -180,8 +179,9 @@ pub fn ContestCard(props: ContestCardProps) -> Element {
                 if has_collapsed {
                     div { class: "flex items-center justify-between gap-4",
                         span { class: "text-sm", "{i18n::tr(&lang, \"владелец\", \"owner\")}" }
-                        button {
-                            class: "btn btn-neutral btn-sm gap-1",
+                        m3e-button {
+                            variant: "tonal",
+                            class: "destructive",
                             onclick: {
                                 let owner_id = contest.owner_id.unwrap_or_default();
                                 let is_owner = STATE.read().is_owner();
@@ -193,7 +193,7 @@ pub fn ContestCard(props: ContestCardProps) -> Element {
                                     }
                                 }
                             },
-                            {icon_element(Icon::Person, 14)}
+                            {icon_slot(Icon::Person, 14)}
                             span { "{owner_login}" }
                         }
                     }
@@ -232,33 +232,37 @@ pub fn ContestCard(props: ContestCardProps) -> Element {
 
                 div { class: "flex flex-wrap items-center gap-2",
                     if (status != ContestStatus::BeforeStart || can_enter) && show_enter {
-                        button {
-                            class: "btn btn-neutral btn-sm gap-1",
+                        m3e-button {
+                            variant: "tonal",
+                            class: "destructive",
                             onclick: {
                                 move |_| { let _ = navigator.push(crate::Route::Contest { contest_id: contest.id }); }
                             },
-                            {icon_element(Icon::Enter, 16)}
+                            {icon_slot(Icon::Enter, 16)}
                             span { "{i18n::tr(&lang, \"войти\", \"enter\")}" }
                         }
                     }
                     if can_manage {
-                        button {
-                            class: "btn btn-neutral btn-sm gap-1",
+                        m3e-button {
+                            variant: "tonal",
+                            class: "destructive",
                             onclick: move |_| editing.set(!editing()),
-                            {icon_element(Icon::Pencil, 16)}
+                            {icon_slot(Icon::Pencil, 16)}
                             span { "{i18n::tr(&lang, \"изменить\", \"edit\")}" }
                         }
-                        button {
-                            class: "btn btn-neutral btn-sm gap-1",
+                        m3e-button {
+                            variant: "tonal",
+                            class: "destructive",
                             onclick: move |_| deleting.set(!deleting()),
-                            {icon_element(Icon::Trash, 16)}
+                            {icon_slot(Icon::Trash, 16)}
                             span { "{i18n::tr(&lang, \"удалить\", \"delete\")}" }
                         }
                     } else {
-                        button {
-                            class: "btn btn-neutral btn-sm gap-1",
+                        m3e-button {
+                            variant: "tonal",
+                            class: "destructive",
                             onclick: move |_| info_open.set(!info_open()),
-                            {icon_element(Icon::Info, 16)}
+                            {icon_slot(Icon::Info, 16)}
                             span { "{i18n::tr(&lang, \"инфо\", \"info\")}" }
                         }
                     }
@@ -269,8 +273,7 @@ pub fn ContestCard(props: ContestCardProps) -> Element {
                         div { class: "modal-box max-w-2xl text-base-content",
                             div { class: "flex items-center justify-between",
                                 h3 { class: "card-title", "{i18n::tr(&lang, \"Изменить контест\", \"Edit contest\")}" }
-                                button {
-                                    class: "btn btn-sm btn-circle btn-ghost",
+                                m3e-icon-button {
                                     onclick: move |_| editing.set(false),
                                     "✕"
                                 }
@@ -302,8 +305,7 @@ pub fn ContestCard(props: ContestCardProps) -> Element {
                         div { class: "modal-box max-w-2xl text-base-content",
                             div { class: "flex items-center justify-between",
                                 h3 { class: "card-title", "{i18n::tr(&lang, \"Информация о контесте\", \"Contest info\")}" }
-                                button {
-                                    class: "btn btn-sm btn-circle btn-ghost",
+                                m3e-icon-button {
                                     onclick: move |_| info_open.set(false),
                                     "✕"
                                 }

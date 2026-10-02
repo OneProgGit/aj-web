@@ -1,7 +1,9 @@
 use dioxus::prelude::*;
 
 use crate::{
-    api, i18n,
+    api,
+    components::icon::icon_slot,
+    i18n,
     models::{DeletionRequest, problems::ProblemQuestion},
     state::STATE,
 };
@@ -9,7 +11,7 @@ use crate::{
 use super::{
     datetime_text::DateTimeText,
     delete_form::DeleteForm,
-    icon::{Icon, icon_element},
+    icon::Icon,
     markdown::{Markdown, MdField},
     user_link::UserLink,
 };
@@ -29,13 +31,13 @@ fn answer_form(
             label: i18n::tr(&lang, "ответ", "answer"),
         }
         div { class: "card-actions justify-end",
-            button {
-                class: "btn btn-ghost btn-sm gap-1",
+            m3e-button {
+                variant: "text",
                 onclick: move |ev| on_cancel.call(ev),
                 span { "{i18n::tr(&lang, \"отменить\", \"cancel\")}" }
             }
-            button {
-                class: "btn btn-primary btn-sm gap-1",
+            m3e-button {
+                variant: "filled",
                 disabled: !valid,
                 onclick: move |_| {
                     let token = STATE.read().token.clone();
@@ -50,7 +52,7 @@ fn answer_form(
                         }
                     });
                 },
-                {icon_element(if valid { Icon::Pencil } else { Icon::CircleBackslash }, 16)}
+                {icon_slot(if valid { Icon::Pencil } else { Icon::CircleBackslash }, 16)}
                 span { "{i18n::tr(&lang, \"ответить\", \"answer\")}" }
             }
         }
@@ -117,18 +119,19 @@ pub fn QuestionCard(props: QuestionCardProps) -> Element {
 
                 div { class: "flex items-center gap-2",
                     if can_answer {
-                        button {
-                            class: "btn btn-ghost btn-sm gap-1",
+                        m3e-button {
+                            variant: "text",
                             onclick: move |_| answering.set(!answering()),
-                            {icon_element(Icon::Pencil, 16)}
+                            {icon_slot(Icon::Pencil, 16)}
                             span { "{i18n::tr(&lang, \"ответить\", \"answer\")}" }
                         }
                     }
                     if can_delete {
-                        button {
-                            class: "btn btn-ghost btn-sm gap-1 text-error",
+                        m3e-button {
+                            variant: "text",
+                            class: "destructive-text",
                             onclick: move |_| deleting.set(!deleting()),
-                            {icon_element(Icon::Trash, 16)}
+                            {icon_slot(Icon::Trash, 16)}
                             span { "{i18n::tr(&lang, \"удалить\", \"delete\")}" }
                         }
                     }
@@ -139,8 +142,7 @@ pub fn QuestionCard(props: QuestionCardProps) -> Element {
                         div { class: "modal-box max-w-2xl",
                             div { class: "flex items-center justify-between",
                                 h3 { class: "card-title", "{i18n::tr(&lang, \"Ответ\", \"Answer\")}" }
-                                button {
-                                    class: "btn btn-sm btn-circle btn-ghost",
+                                m3e-icon-button {
                                     onclick: move |_| answering.set(false),
                                     "✕"
                                 }

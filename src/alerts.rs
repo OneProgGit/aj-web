@@ -87,8 +87,7 @@ pub fn AlertHost() -> Element {
             for alert in alerts.iter().cloned() {
                 div { class: "alert {alert.kind.css_class()} shadow-lg",
                     span { "{alert.text}" }
-                    button {
-                        class: "btn btn-circle btn-ghost btn-sm",
+                    m3e-icon-button {
                         onclick: move |_| { let alerts = &ALERTS; alerts.write().retain(|a| a.id != alert.id); },
                         "✕"
                     }

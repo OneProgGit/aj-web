@@ -25,23 +25,25 @@ pub fn datetime_input(value: DateTime<Utc>, onchange: EventHandler<DateTime<Utc>
 
     rsx! {
         div { class: "flex gap-2 items-center",
-            input {
-                class: "input input-bordered input-sm w-40",
-                r#type: "date",
-                value: date(),
-                oninput: move |ev| {
+            m3e-form-field {
+                input {
+                    r#type: "date",
+                    value: date(),
+                    oninput: move |ev| {
                     date.set(ev.value().clone());
                     apply(());
-                },
+                    },
+                }
             }
-            input {
-                class: "input input-bordered input-sm w-28",
-                r#type: "time",
-                value: time(),
-                oninput: move |ev| {
+            m3e-form-field {
+                input {
+                    r#type: "time",
+                    value: time(),
+                    oninput: move |ev| {
                     time.set(ev.value().clone());
                     apply(());
-                },
+                    },
+                }
             }
         }
     }

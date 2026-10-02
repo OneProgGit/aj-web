@@ -103,7 +103,8 @@ fn GuardLayout() -> Element {
         document::Stylesheet { href: "https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css" }
         document::Stylesheet { href: "https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css", media: "(prefers-color-scheme: dark)" }
         document::Script { src: "https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js" }
-        div { class: "min-h-dvh flex flex-col",
+        // M3E грузится из MaterialHost локальным файлом /m3e.js.
+                div { class: "min-h-dvh flex flex-col",
         nav { class: "navbar bg-base-100 border-b border-base-300",
             div { class: "flex items-center gap-4 px-3 sm:px-6 max-w-7xl mx-auto w-full",
                 Link { to: "/", class: "btn btn-ghost btn-sm font-bold", "ada-judge" }
@@ -183,9 +184,61 @@ pub fn App() -> Element {
 
     rsx! {
         document::Stylesheet { href: asset!("/public/tailwind.css") }
-        div { class: "min-h-screen bg-base-100",
-            Router::<Route> {}
+        // m3e-theme раздаёт компонентам их собственные токены (--md-sys-color-*):
+        // без него цвета не вычисляются и элементы выглядят «пустыми».
+        // Палитра — та же, что у daisyUI-темы: Material You из #4d256e.
+        m3e-theme {
+            color: "#4d256e",
+            variant: "tonal-spot",
+            scheme: "auto",
+            motion: "expressive",
+            div { class: "min-h-dvh flex flex-col",
+                Router::<Route> {}
+            }
+            AlertHost {}
+            MaterialHost {}
         }
-        AlertHost {}
+    }
+}
+
+/// Загрузка M3E и проверка, что компоненты зарегистрированы.
+///
+/// Динамический `import()` внутри `eval` требует `unsafe-eval` в CSP,
+/// а его обычно нет — поэтому вставляем обычный
+/// `<script type="module" src="/m3e.js">` через DOM — локальный файл
+/// собирается esbuild'ом (npm run build:m3e), CDN и сеть не нужны.
+#[component]
+pub fn MaterialHost() -> Element {
+    let failed = use_signal(|| false);
+    let mut failed2 = failed;
+    use_effect(move || {
+        let Some(document) = web_sys::window().and_then(|w| w.document()) else {
+            return;
+        };
+        let Ok(el) = document.create_element("script") else {
+            return;
+        };
+        // Скрипт с src выполняется при вставке — в отличие от инлайнового.
+        el.set_attribute("type", "module").ok();
+        el.set_attribute("src", "/m3e.js").ok();
+        document.head().and_then(|h| h.append_child(&el).ok());
+
+        spawn(async move {
+            gloo_timers::future::TimeoutFuture::new(3000).await;
+            let ok = js_sys::eval("(() => !!customElements.get('m3e-button'))()")
+                .ok()
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
+            if !ok {
+                failed2.set(true);
+            }
+        });
+    });
+    rsx! {
+        if failed() {
+            div { class: "alert alert-error m-3 text-sm",
+                "M3E не загрузился (/m3e.js) — выполни npm run build:m3e"
+            }
+        }
     }
 }

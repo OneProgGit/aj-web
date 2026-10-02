@@ -1,7 +1,7 @@
 use dioxus::prelude::*;
 use pulldown_cmark::{Options, Parser};
 
-use super::icon::{Icon, icon_element};
+use super::icon::{Icon, icon_slot};
 use crate::i18n;
 
 fn render_markdown(text: &str) -> String {
@@ -132,10 +132,10 @@ pub fn MdField(value: Signal<String>, label: String) -> Element {
     rsx! {
         div { class: "flex items-center justify-between gap-2",
             span { class: "label-text", "{label}" }
-            button {
-                class: "btn btn-ghost btn-sm gap-1",
+            m3e-button {
+                variant: "text",
                 onclick: move |_| preview.set(!preview()),
-                {icon_element(Icon::Reader, 14)}
+                {icon_slot(Icon::Reader, 14)}
                 span { "{toggle_label}" }
             }
         }

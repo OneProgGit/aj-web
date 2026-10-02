@@ -4,11 +4,14 @@
   "version": "0.1.0",
   "scripts": {
     "build:css": "tailwindcss -i ./src/input.css -o ./public/tailwind.css --minify",
-    "watch:css": "tailwindcss -i ./src/input.css -o ./public/tailwind.css --watch"
+    "watch:css": "tailwindcss -i ./src/input.css -o ./public/tailwind.css --watch",
+    "build:m3e": "esbuild m3e/entry.js --bundle --format=esm --outfile=public/m3e.js --minify"
   },
   "devDependencies": {
+    "@m3e/web": "^2.8.2",
     "@tailwindcss/cli": "^4.1.0",
     "daisyui": "^5.0.0",
+    "esbuild": "^0.28.2",
     "tailwindcss": "^4.1.0"
   }
 }

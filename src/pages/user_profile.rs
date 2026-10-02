@@ -3,11 +3,8 @@ use dioxus::prelude::*;
 use crate::{
     alerts::show_alert,
     api,
-    components::{
-        admin_badge::AdminBadge,
-        icon::{Icon, icon_element},
-        loading::Loading,
-    },
+    components::icon::icon_slot,
+    components::{admin_badge::AdminBadge, icon::Icon, loading::Loading},
     i18n,
 };
 
@@ -40,12 +37,12 @@ pub fn UserProfile(user_id: i64) -> Element {
 
     rsx! {
         div { class: "flex flex-col items-start gap-4 max-w-7xl mx-auto w-full",
-            button {
-                class: "btn btn-ghost btn-sm gap-2",
+            m3e-button {
+                variant: "text",
                 onclick: move |_| {
                     navigator.go_back();
                 },
-                {icon_element(Icon::Back, 16)}
+                {icon_slot(Icon::Back, 16)}
                 span { "{i18n::tr(&lang, \"назад\", \"back\")}" }
             }
 

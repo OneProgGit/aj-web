@@ -1,18 +1,16 @@
 use dioxus::prelude::*;
 
 use crate::{
-    api, i18n,
+    api,
+    components::icon::icon_slot,
+    i18n,
     models::{problems::PublicProblemConfig, testing::Submission, verdicts::TestingVerdict},
     state::STATE,
 };
 
 use super::{
-    datetime_text::DateTimeText,
-    icon::{Icon, icon_element},
-    loading::Loading,
-    markdown::Markdown,
-    user_link::UserLink,
-    verdict_badge::VerdictBadge,
+    datetime_text::DateTimeText, icon::Icon, loading::Loading, markdown::Markdown,
+    user_link::UserLink, verdict_badge::VerdictBadge,
 };
 
 /// «Посылки» table. Mirrors `AJSubmissions`. Clicking «подробнее» opens a
@@ -91,7 +89,7 @@ pub fn Submissions(props: SubmissionsProps) -> Element {
                 div { class: "modal-box max-w-4xl", style: "max-height: 85dvh;",
                     div { class: "flex items-center justify-between",
                         h3 { class: "card-title", span { "{title}" } }
-                        button { class: "btn btn-sm btn-circle btn-ghost", onclick: move |_| details.set(None), "✕" }
+                        m3e-icon-button { onclick: move |_| details.set(None), "✕" }
                     }
                     SubmissionDetail {
                         submission: submission.clone(),
@@ -111,12 +109,11 @@ pub fn Submissions(props: SubmissionsProps) -> Element {
                         div { class: "flex items-center gap-4",
                             if all_submissions_allowed {
                                 label { class: "label cursor-pointer justify-start gap-2",
-                                    input {
-                                        r#type: "checkbox",
-                                        class: "checkbox checkbox-sm",
+                                    m3e-checkbox {
+
                                         checked: STATE.read().all_submissions,
-                                        onchange: move |ev| {
-                                            let checked = ev.checked();
+                                        onchange: move |_| {
+                                            let checked = !STATE.read().all_submissions;
                                             STATE.write().all_submissions = checked;
                                             reload();
                                         },
@@ -124,11 +121,11 @@ pub fn Submissions(props: SubmissionsProps) -> Element {
                                     span { class: "label-text", "{i18n::tr(&lang, \"все посылки\", \"all submissions\")}" }
                                 }
                             }
-                            button {
-                                class: "btn btn-ghost btn-sm gap-1",
+                            m3e-button {
+                                variant: "text",
                                 disabled: pending(),
                                 onclick: move |_| reload(),
-                                {icon_element(Icon::Update, 14)}
+                                {icon_slot(Icon::Update, 14)}
                                 span { "{i18n::tr(&lang, \"обновить\", \"reload\")}" }
                             }
                         }
@@ -168,8 +165,8 @@ pub fn Submissions(props: SubmissionsProps) -> Element {
                                             td { class: if s.verdict == TestingVerdict::Ok { "font-bold" } else { "" }, "{s.score}" }
                                             td {
                                                 if show_download {
-                                                    button {
-                                                        class: "btn btn-ghost btn-sm gap-1",
+                                                    m3e-button {
+                                                        variant: "text",
                                                         onclick: {
                                                             let token = STATE.read().token.clone();
                                                             let filename = format!("solution.{}", s.language.file_ext());
@@ -186,15 +183,15 @@ pub fn Submissions(props: SubmissionsProps) -> Element {
                                             });
                                         }
                                                         },
-                                                        {icon_element(Icon::Download, 14)}
+                                                        {icon_slot(Icon::Download, 14)}
                                                     }
                                                 }
                                             }
                                             td {
-                                                button {
-                                                    class: "btn btn-ghost btn-sm gap-1",
+                                                m3e-button {
+                                                    variant: "text",
                                                     onclick: move |_| details.set(Some(s.clone())),
-                                                    {icon_element(Icon::Info, 14)}
+                                                    {icon_slot(Icon::Info, 14)}
                                                 }
                                             }
                                         }

@@ -1,24 +1,31 @@
 use dioxus::prelude::*;
 
-use super::icon::{Icon, icon_element};
+use super::icon::{Icon, icon_slot};
 
-/// Password input with a show/hide eye toggle.
+/// Password input with a show/hide eye toggle, in the M3E outlined form field.
 #[component]
-pub fn PasswordField(value: Signal<String>, placeholder: String, class: String) -> Element {
+pub fn PasswordField(
+    value: Signal<String>,
+    label: String,
+    placeholder: String,
+    class: String,
+) -> Element {
     let mut show = use_signal(|| false);
     rsx! {
-        div { class: "relative w-full max-w-md",
+        m3e-form-field {
+            span { slot: "label", "{label}" }
+            m3e-icon-button {
+                slot: "suffix",
+                variant: "text",
+                onclick: move |_| show.set(!show()),
+                {icon_slot(if show() { Icon::EyeOff } else { Icon::Eye }, 16)}
+            }
             input {
-                class: "{class} w-full pr-10",
+                class: "{class}",
                 r#type: if show() { "text" } else { "password" },
                 placeholder: "{placeholder}",
                 value: value(),
                 oninput: move |ev| value.set(ev.value()),
-            }
-            button {
-                class: "btn btn-ghost btn-sm btn-circle absolute right-1 top-1/2 -translate-y-1/2",
-                onclick: move |_| show.set(!show()),
-                {icon_element(if show() { Icon::EyeOff } else { Icon::Eye }, 16)}
             }
         }
     }

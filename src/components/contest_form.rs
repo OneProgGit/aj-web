@@ -7,7 +7,7 @@ use crate::{
 };
 
 use super::datetime_input::datetime_input;
-use super::icon::{Icon, icon_element};
+use super::icon::{Icon, icon_slot};
 
 /// Create/edit form for a contest. Mirrors the «создать контест» and
 /// «изменить контест» popups from aj-app's HomePage / ContestCard.
@@ -58,54 +58,82 @@ pub fn contest_form(
     let valid = !name_ru().is_empty() || !name_en().is_empty();
     let invalid = !valid || duration_secs() <= 0;
 
+    // Запрос одинаков для создания и редактирования — собираем один раз.
+    let submit = move |_: MouseEvent| {
+        on_submit.call(ContestRequest {
+            name_ru: name_ru(),
+            name_en: name_en(),
+            starts_at: starts(),
+            finishes_at: starts() + Duration::seconds(duration_secs()),
+            statements_url_ru: s_url_ru(),
+            editorial_url_ru: e_url_ru(),
+            statements_url_en: s_url_en(),
+            editorial_url_en: e_url_en(),
+            hidden: hidden(),
+            upsolving_enabled: upsolving(),
+            solutions_hidden: hide_solutions(),
+            leaderboard_hidden: hide_leaderboard(),
+            co_authors: co_authors()
+                .split(',')
+                .filter_map(|v| v.trim().parse().ok())
+                .collect(),
+        });
+    };
+
     rsx! {
         div { class: "flex flex-col gap-3",
-            span { class: "label-text", "{i18n::tr(&lang, \"название (рус.)\", \"name (ru)\")}" }
-            input {
-                class: "input input-bordered",
-                value: name_ru(),
-                oninput: move |ev| name_ru.set(ev.value()),
+            m3e-form-field {
+            span { slot: "label", "{i18n::tr(&lang, \"название (рус.)\", \"name (ru)\")}" }
+                input {
+                    value: name_ru(),
+                    oninput: move |ev| name_ru.set(ev.value()),
+                }
             }
-            span { class: "label-text", "{i18n::tr(&lang, \"название (англ.)\", \"name (en)\")}" }
-            input {
-                class: "input input-bordered",
-                value: name_en(),
-                oninput: move |ev| name_en.set(ev.value()),
+            m3e-form-field {
+            span { slot: "label", "{i18n::tr(&lang, \"название (англ.)\", \"name (en)\")}" }
+                input {
+                    value: name_en(),
+                    oninput: move |ev| name_en.set(ev.value()),
+                }
             }
                 span { class: "label-text", "{i18n::tr(&lang, \"начало в\", \"starts at\")}" }
                 {datetime_input(starts(), Callback::new(move |dt| starts.set(dt)))}
                 span { class: "label-text", "{i18n::tr(&lang, \"продолжительность\", \"duration\")}" }
                 div { class: "flex flex-wrap items-center gap-2",
-                    input {
-                        class: "input input-bordered w-20",
-                        r#type: "number",
-                        min: "0",
-                        value: dur_d(),
-                        oninput: move |ev| dur_d.set(ev.value()),
+                    m3e-form-field {
+                        input {
+                            r#type: "number",
+                            min: "0",
+                            value: dur_d(),
+                            oninput: move |ev| dur_d.set(ev.value()),
+                        }
                     }
                     span { class: "text-sm", "{i18n::tr(&lang, \"дн\", \"d\")}" }
-                    input {
-                        class: "input input-bordered w-20",
-                        r#type: "number",
-                        min: "0",
-                        value: dur_h(),
-                        oninput: move |ev| dur_h.set(ev.value()),
+                    m3e-form-field {
+                        input {
+                            r#type: "number",
+                            min: "0",
+                            value: dur_h(),
+                            oninput: move |ev| dur_h.set(ev.value()),
+                        }
                     }
                     span { class: "text-sm", "{i18n::tr(&lang, \"ч\", \"h\")}" }
-                    input {
-                        class: "input input-bordered w-20",
-                        r#type: "number",
-                        min: "0",
-                        value: dur_m(),
-                        oninput: move |ev| dur_m.set(ev.value()),
+                    m3e-form-field {
+                        input {
+                            r#type: "number",
+                            min: "0",
+                            value: dur_m(),
+                            oninput: move |ev| dur_m.set(ev.value()),
+                        }
                     }
                     span { class: "text-sm", "{i18n::tr(&lang, \"мин\", \"min\")}" }
-                    input {
-                        class: "input input-bordered w-20",
-                        r#type: "number",
-                        min: "0",
-                        value: dur_s(),
-                        oninput: move |ev| dur_s.set(ev.value()),
+                    m3e-form-field {
+                        input {
+                            r#type: "number",
+                            min: "0",
+                            value: dur_s(),
+                            oninput: move |ev| dur_s.set(ev.value()),
+                        }
                     }
                     span { class: "text-sm", "{i18n::tr(&lang, \"с\", \"s\")}" }
                 }
@@ -122,86 +150,81 @@ pub fn contest_form(
                     }
                 }
                 if url_lang() == 0 {
-                    span { class: "label-text", "{i18n::tr(&lang, \"ссылка на условия (рус.)\", \"statements url (ru)\")}" }
-                    input {
-                        class: "input input-bordered",
-                        value: s_url_ru(),
-                        oninput: move |ev| s_url_ru.set(ev.value()),
+                    m3e-form-field {
+                    span { slot: "label", "{i18n::tr(&lang, \"ссылка на условия (рус.)\", \"statements url (ru)\")}" }
+                        input {
+                            value: s_url_ru(),
+                            oninput: move |ev| s_url_ru.set(ev.value()),
+                        }
                     }
-                    span { class: "label-text", "{i18n::tr(&lang, \"ссылка на разбор (рус.)\", \"editorial url (ru)\")}" }
-                    input {
-                        class: "input input-bordered",
-                        value: e_url_ru(),
-                        oninput: move |ev| e_url_ru.set(ev.value()),
+                    m3e-form-field {
+                    span { slot: "label", "{i18n::tr(&lang, \"ссылка на разбор (рус.)\", \"editorial url (ru)\")}" }
+                        input {
+                            value: e_url_ru(),
+                            oninput: move |ev| e_url_ru.set(ev.value()),
+                        }
                     }
                 } else {
-                    span { class: "label-text", "{i18n::tr(&lang, \"ссылка на условия (англ.)\", \"statements url (en)\")}" }
-                    input {
-                        class: "input input-bordered",
-                        value: s_url_en(),
-                        oninput: move |ev| s_url_en.set(ev.value()),
+                    m3e-form-field {
+                    span { slot: "label", "{i18n::tr(&lang, \"ссылка на условия (англ.)\", \"statements url (en)\")}" }
+                        input {
+                            value: s_url_en(),
+                            oninput: move |ev| s_url_en.set(ev.value()),
+                        }
                     }
-                    span { class: "label-text", "{i18n::tr(&lang, \"ссылка на разбор (англ.)\", \"editorial url (en)\")}" }
-                    input {
-                        class: "input input-bordered",
-                        value: e_url_en(),
-                        oninput: move |ev| e_url_en.set(ev.value()),
+                    m3e-form-field {
+                    span { slot: "label", "{i18n::tr(&lang, \"ссылка на разбор (англ.)\", \"editorial url (en)\")}" }
+                        input {
+                            value: e_url_en(),
+                            oninput: move |ev| e_url_en.set(ev.value()),
+                        }
                     }
                 }
                 label { class: "label cursor-pointer justify-start gap-2",
-                    input { r#type: "checkbox", class: "checkbox checkbox-sm", checked: hidden(), onchange: move |ev| hidden.set(ev.checked()) }
+                    m3e-checkbox { checked: hidden(), onchange: move |_| hidden.set(!hidden()) }
                     span { class: "label-text", "{i18n::tr(&lang, \"скрыть\", \"hidden\")}" }
                 }
                 label { class: "label cursor-pointer justify-start gap-2",
-                    input { r#type: "checkbox", class: "checkbox checkbox-sm", checked: upsolving(), onchange: move |ev| upsolving.set(ev.checked()) }
+                    m3e-checkbox { checked: upsolving(), onchange: move |_| upsolving.set(!upsolving()) }
                     span { class: "label-text", "{i18n::tr(&lang, \"открыть дорешку\", \"open upsolving\")}" }
                 }
                 label { class: "label cursor-pointer justify-start gap-2",
-                    input { r#type: "checkbox", class: "checkbox checkbox-sm", checked: hide_solutions(), onchange: move |ev| hide_solutions.set(ev.checked()) }
+                    m3e-checkbox { checked: hide_solutions(), onchange: move |_| hide_solutions.set(!hide_solutions()) }
                     span { class: "label-text", "{i18n::tr(&lang, \"скрыть решения\", \"hide solutions\")}" }
                 }
                 label { class: "label cursor-pointer justify-start gap-2",
-                    input { r#type: "checkbox", class: "checkbox checkbox-sm", checked: hide_leaderboard(), onchange: move |ev| hide_leaderboard.set(ev.checked()) }
+                    m3e-checkbox { checked: hide_leaderboard(), onchange: move |_| hide_leaderboard.set(!hide_leaderboard()) }
                     span { class: "label-text", "{i18n::tr(&lang, \"скрыть таблицу лидеров\", \"hide leaderboard\")}" }
                 }
-                span { class: "label-text", "{i18n::tr(&lang, \"соавторы (через запятую, без пробелов)\", \"co-authors (comma-separated)\")}" }
-                input {
-                    class: "input input-bordered",
-                    value: co_authors(),
-                    oninput: move |ev| co_authors.set(ev.value()),
+                m3e-form-field {
+                span { slot: "label", "{i18n::tr(&lang, \"соавторы (через запятую, без пробелов)\", \"co-authors (comma-separated)\")}" }
+                    input {
+                        value: co_authors(),
+                        oninput: move |ev| co_authors.set(ev.value()),
+                    }
                 }
                 div { class: "card-actions justify-end mt-2",
-                    button {
-                        class: "btn btn-ghost btn-sm",
+                    m3e-button {
+                        variant: "text",
                         onclick: move |ev| on_cancel.call(ev),
                         span { "{i18n::tr(&lang, \"отменить\", \"cancel\")}" }
                     }
-                    button {
-                        class: if initial.is_some() { "btn btn-primary btn-sm gap-2" } else { "btn btn-neutral btn-sm gap-1" },
-                        disabled: invalid,
-                        onclick: move |_| {
-                            let request = ContestRequest {
-                                name_ru: name_ru(),
-                                name_en: name_en(),
-                                starts_at: starts(),
-                                finishes_at: starts() + Duration::seconds(duration_secs()),
-                                statements_url_ru: s_url_ru(),
-                                editorial_url_ru: e_url_ru(),
-                                statements_url_en: s_url_en(),
-                                editorial_url_en: e_url_en(),
-                                hidden: hidden(),
-                                upsolving_enabled: upsolving(),
-                                solutions_hidden: hide_solutions(),
-                                leaderboard_hidden: hide_leaderboard(),
-                                co_authors: co_authors()
-                                    .split(',')
-                                    .filter_map(|s| s.trim().parse().ok())
-                                    .collect(),
-                            };
-                            on_submit.call(request);
-                        },
-                        {icon_element(if valid { if initial.is_some() { Icon::Pencil } else { Icon::Plus } } else { Icon::CircleBackslash }, 16)}
-                        span { "{submit_label}" }
+                    if initial.is_some() {
+                        m3e-button {
+                            variant: "filled",
+                            disabled: invalid,
+                            onclick: submit,
+                            {icon_slot(if valid { Icon::Pencil } else { Icon::CircleBackslash }, 16)}
+                            span { "{submit_label}" }
+                        }
+                    } else {
+                        m3e-button {
+                            variant: "tonal",
+                            disabled: invalid,
+                            onclick: submit,
+                            {icon_slot(if valid { Icon::Plus } else { Icon::CircleBackslash }, 16)}
+                            span { "{submit_label}" }
+                        }
                     }
                 }
         }

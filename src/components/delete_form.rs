@@ -1,7 +1,7 @@
 use dioxus::prelude::*;
 
 use super::{
-    icon::{Icon, icon_element},
+    icon::{Icon, icon_slot},
     password_field::PasswordField,
 };
 
@@ -23,46 +23,47 @@ pub fn DeleteForm(
                 div { class: "flex flex-col gap-3",
                     div { class: "flex items-center justify-between gap-4",
                         p { class: "card-title", "{crate::i18n::tr(&crate::state::language(), \"Требуется рут-доступ\", \"Root access required\")}" }
-                        button {
-                            class: "btn btn-sm btn-circle btn-ghost",
+                        m3e-icon-button {
                             onclick: move |ev| on_cancel.call(ev),
                             "✕"
                         }
                     }
-                    input {
-                        class: "input input-bordered",
-                        placeholder: crate::i18n::tr(&crate::state::language(), "логин", "login"),
-                        value: login(),
-                        oninput: move |ev| login.set(ev.value()),
+                    m3e-form-field {
+                        input {
+                            placeholder: crate::i18n::tr(&crate::state::language(), "логин", "login"),
+                            value: login(),
+                            oninput: move |ev| login.set(ev.value()),
+                        }
                     }
                     PasswordField {
                         value: password,
-                        placeholder: crate::i18n::tr(&crate::state::language(), "пароль", "password"),
-                        class: "input input-bordered".to_string(),
+                        label: crate::i18n::tr(&crate::state::language(), "пароль", "password"),
+                        placeholder: crate::i18n::tr(&crate::state::language(), "не меньше 8 символов", "at least 8 characters"),
+                        class: "w-full".to_string(),
                     }
                     label { class: "label cursor-pointer justify-start gap-2",
-                        input {
-                            r#type: "checkbox",
-                            class: "checkbox checkbox-error checkbox-sm",
+                        m3e-checkbox {
+                            class: "text-error",
                             checked: confirmed(),
-                            onchange: move |ev| confirmed.set(ev.checked()),
+                            onchange: move |_| confirmed.set(!confirmed()),
                         }
                         span { class: "label-text", "{crate::i18n::tr(&crate::state::language(), \"подтвердите удаление\", \"confirm deletion\")}" }
                     }
                     div { class: "card-actions justify-end mt-2",
-                        button {
-                            class: "btn btn-ghost btn-sm",
+                        m3e-button {
+                            variant: "text",
                             onclick: move |ev| on_cancel.call(ev),
                             span { "{crate::i18n::tr(&crate::state::language(), \"отменить\", \"cancel\")}" }
                         }
-                        button {
-                            class: "btn btn-error btn-sm gap-2",
+                        m3e-button {
+                            variant: "filled",
+                            class: "destructive",
                             disabled: !(!login().is_empty() && !password().is_empty() && confirmed()),
                             onclick: {
                                 let on_delete = on_delete;
                                 move |_| on_delete.call((login(), password(), confirmed()))
                             },
-                            {icon_element(if confirmed() { Icon::Trash } else { Icon::CircleBackslash }, 16)}
+                            {icon_slot(if confirmed() { Icon::Trash } else { Icon::CircleBackslash }, 16)}
                             span { "{crate::i18n::tr(&crate::state::language(), \"удалить\", \"delete\")}" }
                         }
                     }

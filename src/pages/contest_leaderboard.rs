@@ -4,7 +4,7 @@ use crate::{
     alerts::{AlertKind, show_alert},
     api,
     components::{
-        icon::{Icon, icon_element},
+        icon::{Icon, icon_slot},
         leaderboard::Leaderboard,
         loading::Loading,
     },
@@ -150,39 +150,36 @@ pub fn ContestLeaderboard(contest_id: i64) -> Element {
             div { class: "flex flex-wrap gap-4 items-center",
                 h1 { class: "text-2xl font-bold", "{i18n::tr(&lang, \"Таблица лидеров\", \"Leaderboard\")}" }
                 if can_manage {
-                    details { class: "dropdown",
-                        summary { class: "btn btn-ghost btn-sm gap-1",
-                            {icon_element(Icon::Download, 14)}
+                    // Штатное меню M3E: триггер открывает anchored-панель,
+                    // позиционируется и закрывается по клику вне — само.
+                    m3e-button {
+                        variant: "tonal",
+                        {icon_slot(Icon::Download, 16)}
+                        m3e-menu-trigger { for: "export-menu",
                             span { "{i18n::tr(&lang, \"экспортировать\", \"export\")}" }
                         }
-                        ul { class: "menu dropdown-content bg-base-200 rounded-box p-2 shadow",
-                            li {
-                                button {
-                                    onclick: {
-                                        let export = export.clone();
-                                        move |_| export("csv")
-                                    },
-                                    "CSV"
-                                }
-                            }
-                            li {
-                                button {
-                                    onclick: {
-                                        let export = export.clone();
-                                        move |_| export("md")
-                                    },
-                                    "MD"
-                                }
-                            }
-                            li {
-                                button {
-                                    onclick: {
-                                        let export = export.clone();
-                                        move |_| export("html")
-                                    },
-                                    "HTML"
-                                }
-                            }
+                    }
+                    m3e-menu { id: "export-menu",
+                        m3e-menu-item {
+                            onclick: {
+                                let export = export.clone();
+                                move |_| export("csv")
+                            },
+                            "CSV"
+                        }
+                        m3e-menu-item {
+                            onclick: {
+                                let export = export.clone();
+                                move |_| export("md")
+                            },
+                            "MD"
+                        }
+                        m3e-menu-item {
+                            onclick: {
+                                let export = export.clone();
+                                move |_| export("html")
+                            },
+                            "HTML"
                         }
                     }
                 }

@@ -1,17 +1,443 @@
 @import "tailwindcss";
 
-/* daisyUI v5 — built-in themes ONLY: `light` (default) and `dark`
-   (automatic, follows prefers-color-scheme). No custom theme, no custom
-   classes, no overrides. daisyUI's compiled CSS already positions `.modal`
-   (position: fixed; inset: 0), so no .modal override is needed here. */
+/* daisyUI v5 — тема задаётся через CSS-переменные ниже (Material You),
+   встроенные garden/sunset оставлены как есть. */
+
 @plugin "daisyui" {
     themes: garden --default, sunset --prefersdark;
 }
 
-/* Без обводки у кнопок (геометрию не трогаем — только прозрачная граница). */
-button.btn {
-    border-color: transparent;
+/* =========================================================
+   Material You: палитра посчитана из seed-цвета #4d256e
+   (Tonal Spot: primary/secondary — тон seed, tertiary — тон seed+60,
+   нейтрали — с пониженной chroma, чтобы фон был без розового налёта).
+   Все пары X / X-content проверены по WCAG (>= 5.1).
+   ========================================================= */
+
+:root,
+[data-theme=violet] {
+    color-scheme: light;
+    --color-base-100: #fffbff;
+    --color-base-200: #f5eff2;
+    --color-base-300: #eae4e7;
+    --color-base-content: #211f21;
+    --color-primary: #705289;
+    --color-primary-content: #ffffff;
+    --color-secondary: #665a6e;
+    --color-secondary-content: #ffffff;
+    --color-accent: #815156;
+    --color-accent-content: #ffffff;
+    --color-neutral: #323032;
+    --color-neutral-content: #ffffff;
+    --color-neutral-variant: #332f35;
+    --color-neutral-variant-content: #ffffff;
+    --color-info: #2f6fb5;
+    --color-info-content: #ffffff;
+    --color-success: #166b30;
+    --color-success-content: #ffffff;
+    --color-warning: #8a5300;
+    --color-warning-content: #ffffff;
+    --color-error: #ba1a1a;
+    --color-error-content: #ffffff;
+    --radius-selector: 1rem;
+    --radius-field: 0.5rem;
+    --radius-box: 1rem;
+    --size-selector: 0.25rem;
+    --size-field: 0.25rem;
+    --border: 1px;
+    --depth: 0;
+    --noise: 0;
 }
+
+[data-theme=violet-dark] {
+    color-scheme: dark;
+    --color-base-100: #1d1b1d;
+    --color-base-200: #2b292c;
+    --color-base-300: #3b383b;
+    --color-base-content: #fef8fb;
+    --color-primary: #ddb9f8;
+    --color-primary-content: #000000;
+    --color-secondary: #d1c1d9;
+    --color-secondary-content: #000000;
+    --color-accent: #f3b7bc;
+    --color-accent-content: #000000;
+    --color-neutral: #e7e1e4;
+    --color-neutral-content: #000000;
+    --color-neutral-variant: #e8e0e8;
+    --color-neutral-variant-content: #000000;
+    --color-info: #2f6fb5;
+    --color-info-content: #ffffff;
+    --color-success: #7ddc9a;
+    --color-success-content: #000000;
+    --color-warning: #ffb868;
+    --color-warning-content: #000000;
+    --color-error: #ffb4ab;
+    --color-error-content: #000000;
+    --radius-selector: 1rem;
+    --radius-field: 0.5rem;
+    --radius-box: 1rem;
+    --size-selector: 0.25rem;
+    --size-field: 0.25rem;
+    --border: 1px;
+    --depth: 0;
+    --noise: 0;
+}
+
+/* Тёмная палитра — по prefers-color-scheme. */
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme=light]) {
+        color-scheme: dark;
+        --color-base-100: #1d1b1d;
+        --color-base-200: #2b292c;
+        --color-base-300: #3b383b;
+        --color-base-content: #fef8fb;
+        --color-primary: #ddb9f8;
+        --color-primary-content: #000000;
+        --color-secondary: #d1c1d9;
+        --color-secondary-content: #000000;
+        --color-accent: #f3b7bc;
+        --color-accent-content: #000000;
+        --color-neutral: #e7e1e4;
+        --color-neutral-content: #000000;
+        --color-neutral-variant: #e8e0e8;
+        --color-neutral-variant-content: #000000;
+        --color-info: #2f6fb5;
+        --color-info-content: #ffffff;
+        --color-success: #7ddc9a;
+        --color-success-content: #000000;
+        --color-warning: #ffb868;
+        --color-warning-content: #000000;
+        --color-error: #ffb4ab;
+        --color-error-content: #000000;
+    }
+}
+
+/* =========================================================
+   Material 3 поверх daisyUI.
+
+   daisyUI держит всё на CSS-переменных, поэтому M3-слой — это
+   переопределение токенов и геометрии компонентов, без правок
+   в Rust: классы остаются те же, вид становится материальным.
+   ========================================================= */
+
+/* --- Форма (M3 shape scale) --- */
+:root {
+    --radius-selector: 0.5rem;   /* extra-small: чипы, бейджи */
+    --radius-field: 0.5rem;      /* small: поля, кнопки */
+    --radius-box: 0.75rem;       /* medium: карточки */
+    --md-radius-xs: 0.25rem;
+    --md-radius-sm: 0.5rem;
+    --md-radius-md: 0.75rem;
+    --md-radius-lg: 1rem;
+    --md-radius-xl: 1.75rem;     /* extra-large: диалоги */
+
+    /* Токены состояния (M3 state layers) */
+    --md-hover: 8%;
+    --md-focus: 10%;
+    --md-press: 10%;
+    --md-selected: 12%;
+
+    /* Контейнерные поверхности (M3 surface containers) */
+    --md-surface-container-lowest: var(--color-base-100);
+    --md-surface-container-low: var(--color-base-200);
+    --md-surface-container: var(--color-base-200);
+    --md-surface-container-high: var(--color-base-300);
+    --md-surface-container-highest: color-mix(in oklab, var(--color-base-300) 88%, var(--color-base-content));
+
+    /* Elevation 0-3 (M3) */
+    --md-elev-1: 0 1px 2px rgb(0 0 0 / 0.30), 0 1px 3px 1px rgb(0 0 0 / 0.15);
+    --md-elev-2: 0 1px 2px rgb(0 0 0 / 0.30), 0 2px 6px 2px rgb(0 0 0 / 0.15);
+    --md-elev-3: 0 4px 8px 3px rgb(0 0 0 / 0.15), 0 1px 3px rgb(0 0 0 / 0.30);
+    --md-elev-4: 0 6px 10px 4px rgb(0 0 0 / 0.15), 0 2px 3px rgb(0 0 0 / 0.30);
+
+    /* Ripple-эффект нажатия (M3) */
+    --md-ripple: 0 0 0 0 currentColor;
+}
+
+/* --- Типографика (M3 type scale, уменьшенная под моноширинный шрифт) --- */
+:root {
+    --md-label-lg: 0.875rem;
+    --md-title-sm: 0.875rem;
+    --md-title-md: 1rem;
+    --md-title-lg: 1.375rem;
+    --md-headline-sm: 1.5rem;
+    --md-body-sm: 0.8125rem;
+    --md-body-md: 0.875rem;
+    --md-body-lg: 1rem;
+}
+
+/* Заголовки страниц/карточек — headline/title по M3: без letter-spacing,
+   вес 400-500 (моноширинный шрифт на 700 выглядит слишком тяжело). */
+.text-2xl { font-size: var(--md-headline-sm); font-weight: 400; letter-spacing: 0; }
+.text-xl { font-size: var(--md-title-lg); font-weight: 400; letter-spacing: 0; }
+.font-bold { font-weight: 500; }
+
+/* --- Кнопки (M3: pill, state layers, без обводки) --- */
+button.btn,
+a.btn {
+    border: none;
+    border-radius: 9999px;               /* M3: fully rounded */
+    font-size: var(--md-label-lg);
+    font-weight: 500;
+    letter-spacing: 0.01em;
+    text-transform: none;
+    box-shadow: none;
+    transition:
+        background-color 120ms cubic-bezier(0.2, 0, 0, 1),
+        box-shadow 120ms cubic-bezier(0.2, 0, 0, 1),
+        opacity 120ms;
+    position: relative;
+    overflow: hidden;
+}
+
+/* Высота по M3 spec: 40px обычная, 32px компактная */
+button.btn:not(.btn-xs):not(.btn-sm) {
+    min-height: 2.5rem;
+    height: 2.5rem;
+}
+button.btn.btn-sm {
+    min-height: 2rem;
+    height: 2rem;
+    padding-inline: 1rem;
+}
+
+/* State layers: hover/focus/press через подложку currentColor */
+button.btn::after,
+a.btn::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-color: currentColor;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 120ms;
+}
+button.btn:hover::after,
+a.btn:hover::after { opacity: 0.08; }
+button.btn:active::after,
+a.btn:active::after { opacity: 0.12; }
+button.btn:focus-visible {
+    outline: 3px solid color-mix(in oklab, var(--color-primary) 60%, transparent);
+    outline-offset: 2px;
+}
+
+/* Filled (primary) — тень только на pressed */
+button.btn.btn-primary {
+    box-shadow: none;
+}
+button.btn.btn-primary:active { box-shadow: var(--md-elev-1); }
+
+/* Tonal (в daisyUI это btn-neutral) — приглушённый контейнер */
+button.btn.btn-neutral {
+    background-color: var(--md-surface-container-high);
+    color: var(--color-base-content);
+}
+button.btn.btn-neutral::after { color: var(--color-base-content); }
+
+/* Text (ghost) — без подложки до наведения */
+button.btn.btn-ghost {
+    background-color: transparent;
+}
+button.btn.btn-ghost:hover { background-color: color-mix(in oklab, currentColor 8%, transparent); }
+
+/* Error — filled, если явно задан btn-error */
+button.btn.btn-error {
+    border-radius: 9999px;
+    font-weight: 500;
+}
+button.btn.btn-error.btn-ghost { background-color: transparent; }
+
+/* Круглые иконки-кнопки: M3 FAB-ish, минимальная зона касания 40px */
+button.btn.btn-circle {
+    border-radius: 9999px;
+    aspect-ratio: 1;
+}
+
+/* Ripple от нажатия (M3) */
+.ripple-ink {
+    position: absolute;
+    border-radius: 9999px;
+    transform: scale(0);
+    background-color: currentColor;
+    opacity: 0.16;
+    pointer-events: none;
+    animation: md-ripple 520ms cubic-bezier(0.2, 0, 0, 1) forwards;
+}
+@keyframes md-ripple {
+    to {
+        transform: scale(2.6);
+        opacity: 0;
+    }
+}
+
+/* --- Карточки (M3 elevated / filled / outlined) --- */
+.card {
+    border-radius: var(--md-radius-md);
+    box-shadow: var(--md-elev-1);
+    border: none;
+    outline: none;
+    transition: box-shadow 150ms cubic-bezier(0.2, 0, 0, 1);
+}
+.card:hover { box-shadow: var(--md-elev-2); }
+.card-title {
+    font-size: var(--md-title-lg);
+    font-weight: 500;
+    line-height: 1.4;
+    letter-spacing: 0;
+}
+.card-body { padding: 1rem 1rem; }
+.card-actions { padding: 0.5rem 1rem 1rem; }
+
+/* Карточки, окрашенные статусом контеста (bg-base-200 и т.п.), —
+   в M3 это «filled card»: без тени, с own-color контейнером. */
+.card.bg-base-200 {
+    box-shadow: none;
+}
+.card.bg-base-200:hover {
+    box-shadow: var(--md-elev-1);
+}
+
+/* --- Поля ---
+   Текстовые поля теперь M3E (m3e-form-field), но select/textarea ещё
+   на daisyUI, поэтому их базовый вид не трогаем: прежний «M3-скин»
+   делал им background-color: transparent, и выпадающие списки
+   теряли фон. */
+
+/* --- Табы (M3 primary tabs: индикатор снизу) --- */
+.tabs-box {
+    background-color: transparent;
+    border: none;
+    box-shadow: none;
+    border-radius: var(--md-radius-md);
+    padding: 0.25rem;
+    display: inline-flex;
+    gap: 0.25rem;
+}
+.tabs-box .tab {
+    border-radius: var(--md-radius-sm);
+    font-size: var(--md-title-sm);
+    font-weight: 500;
+    padding-inline: 1rem;
+    height: 2.5rem;
+    border-bottom: 3px solid transparent;
+    background-color: transparent;
+    transition: background-color 120ms;
+}
+.tabs-box .tab:hover {
+    background-color: color-mix(in oklab, currentColor 8%, transparent);
+}
+.tabs-box .tab.tab-active {
+    background-color: color-mix(in oklab, var(--color-primary) 12%, transparent);
+    color: var(--color-primary);
+    border-bottom: 3px solid var(--color-primary);
+}
+.tabs-box .tab.tab-active::after { display: none; }
+.tabs-box .tab:not(.tab-active) { border-bottom-color: transparent; }
+
+/* Уже существующий активный таб не должен терять подложку */
+.tabs-box .tab.tab-active:hover {
+    background-color: color-mix(in oklab, var(--color-primary) 16%, transparent);
+}
+
+/* --- Модальные окна (M3 basic dialog: скругление XL + elevation 3) --- */
+.modal-box {
+    border-radius: var(--md-radius-xl);
+    box-shadow: var(--md-elev-3);
+    background-color: var(--md-surface-container-high);
+    padding: 1.5rem;
+}
+.modal-backdrop {
+    background-color: color-mix(in oklab, #000 40%, transparent);
+}
+
+/* --- Уведомления (M3 snackbar: тёмная подложка, скругление XS) --- */
+.toast .alert {
+    border-radius: var(--md-radius-xs);
+    box-shadow: var(--md-elev-3);
+    border: none;
+    font-size: var(--md-body-md);
+    padding: 0.875rem 1rem;
+    min-width: 20rem;
+    animation: md-snackbar 200ms cubic-bezier(0.2, 0, 0, 1);
+}
+@keyframes md-snackbar {
+    from {
+        opacity: 0;
+        transform: translateY(-0.75rem);
+    }
+}
+.toast .alert-info { background-color: var(--md-surface-container-highest); color: var(--color-base-content); }
+.toast .alert-success { background-color: #146c2e; color: #ffffff; }
+.toast .alert-warning { background-color: #6b4100; color: #ffe0b2; }
+.toast .alert-error { background-color: #7f1d1d; color: #ffd9d6; }
+
+/* --- Шапка (M3 top app bar: 64px) --- */
+.navbar {
+    min-height: 4rem;
+    background-color: var(--md-surface-container);
+    padding-inline: 1rem;
+}
+
+/* --- Бейджи (M3 assist chip: pill) --- */
+.badge {
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    height: 1.5rem;
+    padding-inline: 0.5rem;
+    border: none;
+}
+
+/* --- Чекбоксы (M3: 2px скругление, primary при выборе) --- */
+.checkbox {
+    border-radius: 2px;
+    border-width: 2px;
+    width: 1.25rem;
+    height: 1.25rem;
+}
+.checkbox:checked {
+    background-color: var(--color-primary);
+    border-color: var(--color-primary);
+}
+
+/* --- Спиннер (M3 circular progress: primary) --- */
+.loading {
+    color: var(--color-primary);
+    opacity: 1;
+}
+
+/* --- Таблицы (M3 data table: header label-small, row 48px) --- */
+.table :where(th) {
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: color-mix(in oklab, var(--color-base-content) 75%, transparent);
+    border-bottom: 1px solid var(--color-base-content);
+}
+.table :where(td) {
+    font-size: var(--md-body-md);
+    height: 3rem;
+}
+.table-zebra tbody tr:nth-child(even) {
+    background-color: color-mix(in oklab, var(--color-base-content) 3%, transparent);
+}
+.table :where(tr):hover {
+    background-color: color-mix(in oklab, var(--color-primary) 8%, transparent);
+}
+
+/* --- Ссылки и focus --- */
+a { text-underline-offset: 0.2em; }
+:focus-visible {
+    outline: 3px solid color-mix(in oklab, var(--color-primary) 60%, transparent);
+    outline-offset: 2px;
+}
+
+/* --- Мелкие правки под M3 --- */
+.divider { background-color: color-mix(in oklab, var(--color-base-content) 12%, transparent); }
+.menu { border-radius: var(--md-radius-md); padding: 0.5rem; }
+.menu li > *:not(ul, menu, .menu-title, details, .btn) {
+    border-radius: var(--md-radius-xs);
+}
+
 
 @theme {
     --font-sans: "JetBrains Mono", ui-monospace, monospace;
@@ -122,4 +548,91 @@ button.btn {
     src: url("/fonts/JetBrainsMono-Italic.ttf") format("truetype");
     font-weight: 300 700;
     font-style: italic;
+}
+
+/* --- Destructive-действия (удаление) ---
+   В Material 3 отдельного destructive нет — по гайдлайну Google это
+   error-роли. Переопределяем sys-токены кнопки на error-палитру. */
+m3e-button.destructive {
+    --md-sys-color-primary: var(--color-error);
+    --md-sys-color-on-primary: var(--color-error-content);
+}
+m3e-button.destructive-text {
+    --md-sys-color-primary: var(--color-error);
+    --md-sys-color-on-surface: var(--color-error);
+}
+
+/* --- Поля: убираем собственную рамку нативного input ---
+   m3e-form-field рисует контур сам, а у input внутри остаётся
+   дефолтная рамка браузера — из-за неё появляется «внутренняя рамка». */
+m3e-form-field > input,
+m3e-form-field > textarea {
+    border: none !important;
+    outline: none !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    width: 100%;
+    color: inherit;
+    font: inherit;
+    padding: 0;
+}
+m3e-form-field {
+    width: 100%;
+}
+
+/* --- Поля-числа (длительность) не растягиваются на всю форму --- */
+m3e-form-field.w-20, m3e-form-field.w-28, m3e-form-field.w-40 {
+    width: fit-content;
+}
+
+/* --- Блок кода в теме ---
+   Раньше жёсткие цвета GitHub; берём поверхности темы. */
+.md-body .md-codeblock {
+    background: var(--md-surface-container-low, var(--color-base-200));
+    color: var(--md-sys-color-on-surface, var(--color-base-content));
+    border: 1px solid color-mix(in oklab, var(--color-base-content) 12%, transparent);
+}
+.md-body .md-code {
+    background: transparent !important;
+}
+.md-body .md-code code.hljs {
+    background: transparent;
+}
+.md-body .md-code code.hljs,
+.md-body .md-codeblock pre {
+    color: inherit;
+}
+
+/* --- Центрирование кнопок-ссылок в ячейках --- */
+.table :where(td) > *,
+.table :where(th) > * {
+    margin-inline: auto;
+}
+
+/* --- Слои ---
+   Таблицы и модалки перекрывают обычный контент, поэтому меню и
+   тосты должны быть выше них. */
+.table thead th {
+    z-index: 1;
+}
+.dropdown,
+.dropdown-content,
+.menu {
+    z-index: 60;
+}
+.toast {
+    z-index: 90;
+}
+.modal {
+    z-index: 100;
+}
+/* Позиционированный список внутри кнопки-родителя */
+.absolute {
+    position: absolute;
+}
+.z-60 {
+    z-index: 60;
+}
+.list-none {
+    list-style: none;
 }

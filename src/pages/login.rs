@@ -3,10 +3,8 @@ use dioxus::prelude::*;
 use crate::{
     alerts::{AlertKind, show_alert},
     api,
-    components::{
-        icon::{Icon, icon_element},
-        password_field::PasswordField,
-    },
+    components::icon::icon_slot,
+    components::{icon::Icon, password_field::PasswordField},
     i18n,
     state::STATE,
 };
@@ -22,30 +20,32 @@ pub fn Login() -> Element {
     rsx! {
         div { class: "flex flex-col items-start gap-4 max-w-7xl mx-auto w-full",
             div { class: "flex gap-4 items-center",
-                button {
-                    class: "btn btn-ghost btn-sm gap-2",
+                m3e-button {
+                    variant: "text",
                     onclick: move |_| { let _ = navigator.push(crate::Route::Welcome {}); },
-                    {icon_element(Icon::Back, 16)}
+                    {icon_slot(Icon::Back, 16)}
                     span { "{i18n::tr(&lang, \"назад\", \"back\")}" }
                 }
                 h1 { class: "text-3xl font-bold", "{i18n::tr(&lang, \"Вход в аккаунт\", \"Log in\")}" }
             }
 
-            input {
-                class: "input input-bordered w-full max-w-md",
-                placeholder: i18n::tr(&lang, "логин", "login"),
-                value: login(),
-                oninput: move |ev| login.set(ev.value()),
+            m3e-form-field {
+                input {
+                    placeholder: i18n::tr(&lang, "логин", "login"),
+                    value: login(),
+                    oninput: move |ev| login.set(ev.value()),
+                }
             }
 
             PasswordField {
                 value: password,
-                placeholder: i18n::tr(&lang, "пароль", "password"),
-                class: "input input-bordered max-w-md".to_string(),
+                label: i18n::tr(&lang, "пароль", "password"),
+                placeholder: i18n::tr(&lang, "ваш пароль", "your password"),
+                class: "w-full max-w-md".to_string(),
             }
 
-            button {
-                class: "btn btn-primary btn-sm gap-1",
+            m3e-button {
+                variant: "filled",
                 disabled: busy(),
                 onclick: {
                     let nav = navigator;
@@ -82,7 +82,7 @@ pub fn Login() -> Element {
                         });
                     }
                 },
-                {icon_element(Icon::Enter, 16)}
+                {icon_slot(Icon::Enter, 16)}
                 span { "{i18n::tr(&lang, \"войти\", \"log in\")}" }
             }
         }

@@ -8,10 +8,6 @@ pub fn tr(lang: &str, ru: &str, en: &str) -> String {
     }
 }
 
-pub fn tr_ru(_lang: &str, ru: &str) -> String {
-    ru.to_string()
-}
-
 pub fn problem_title(lang: &str, name_ru: &str, name_en: &str) -> String {
     if lang == "en" && !name_en.is_empty() {
         name_en.to_string()
@@ -109,9 +105,9 @@ pub fn testing_type_text(lang: &str, t: &crate::models::problems::ProblemTesting
 #[allow(dead_code)]
 pub fn total_verdict_text(lang: &str, v: &crate::models::verdicts::TestingVerdict) -> String {
     match v {
-        crate::models::verdicts::TestingVerdict::Ok => tr(lang, "полное решение", "full solution"),
+        crate::models::verdicts::TestingVerdict::Ok => tr(lang, "Полное решение", "Accepted"),
         crate::models::verdicts::TestingVerdict::PartialSolution => {
-            tr(lang, "частичное решение", "partial solution")
+            tr(lang, "Частичное решение", "Partial solution")
         }
         crate::models::verdicts::TestingVerdict::Pending => tr(lang, "в очереди", "pending"),
         crate::models::verdicts::TestingVerdict::Compiling => {

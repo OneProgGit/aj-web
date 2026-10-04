@@ -10,32 +10,32 @@ pub fn VerdictBadge(verdict: TestingVerdict) -> Element {
     let (classes, text, animated) = match verdict {
         TestingVerdict::Pending => (
             "badge badge-warning px-4 whitespace-nowrap",
-            crate::i18n::tr_ru(&lang, "В очереди"),
+            crate::i18n::tr(&lang, "В очереди", "Pending"),
             true,
         ),
         TestingVerdict::Compiling => (
             "badge badge-info px-4 whitespace-nowrap",
-            crate::i18n::tr_ru(&lang, "Компиляция"),
+            crate::i18n::tr(&lang, "Компиляция", "Compiling"),
             true,
         ),
         TestingVerdict::Testing => (
             "badge badge-info px-4 whitespace-nowrap",
-            crate::i18n::tr_ru(&lang, "Тестирование"),
+            crate::i18n::tr(&lang, "Тестирование", "Testing"),
             true,
         ),
         TestingVerdict::Ok => (
             "badge badge-success px-4 rounded-lg whitespace-nowrap",
-            verdict.to_string(),
+            crate::i18n::tr(&lang, "Полное решение", "Accepted"),
             false,
         ),
         TestingVerdict::PartialSolution => (
             "badge badge-warning px-4 whitespace-nowrap",
-            crate::i18n::tr_ru(&lang, "Частичное решение"),
+            crate::i18n::tr(&lang, "Частичное решение", "Partial solution"),
             false,
         ),
         TestingVerdict::CompilationError => (
             "badge badge-error px-4 whitespace-nowrap",
-            crate::i18n::tr_ru(&lang, "Ошибка компиляции"),
+            crate::i18n::tr(&lang, "Ошибка компиляции", "Compilation error"),
             false,
         ),
         TestingVerdict::Fail => (

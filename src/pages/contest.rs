@@ -62,28 +62,40 @@ fn tab_to_url(tab: u8) {
 fn problem_selector(
     problems: Vec<PublicProblemConfig>,
     mut selected_problem: Signal<usize>,
+    switching: Signal<bool>,
 ) -> Element {
     rsx! {
         select {
             class: "select select-bordered select-sm",
             value: selected_problem().to_string(),
+            // Пока грузятся посылки новой задачи, селект гасим: иначе можно
+            // прыгнуть дальше и получить два конкурирующих запроса, причём
+            // показанные посылки будут не той задачи, что выбрана.
+            disabled: switching(),
             onchange: move |ev| {
                 let idx = ev.value().parse::<usize>().unwrap_or(0);
                 selected_problem.set(idx);
                 let token = crate::state::token();
                 let all = STATE.read().all_submissions;
+                let mut switching = switching;
+                switching.set(true);
                 spawn(async move {
                     let problems = STATE.read().contest_problems.clone();
-                    if let Some(problem) = problems.get(idx) {
-                        let res = if all {
+                    let res = match problems.get(idx) {
+                        Some(problem) if all => {
                             api::problems::get_problem_submissions_all(problem.id, &token).await
-                        } else {
-                            api::problems::get_problem_submissions_my(problem.id, &token).await
-                        };
-                        match res {
-                            Ok(subs) => STATE.write().submissions = subs,
-                            Err(e) => crate::state::show_error(e),
                         }
+                        Some(problem) => {
+                            api::problems::get_problem_submissions_my(problem.id, &token).await
+                        }
+                        None => return,
+                    };
+                    // Сбрасываем до разбора результата, иначе при ошибке
+                    // флаг останется в true и задача «зависнет» на спиннере.
+                    switching.set(false);
+                    match res {
+                        Ok(subs) => STATE.write().submissions = subs,
+                        Err(e) => crate::state::show_error(e),
                     }
                 });
             },
@@ -222,6 +234,10 @@ pub fn Contest(contest_id: i64) -> Element {
     let mut started_for = use_signal(|| None::<i64>);
     let mut busy = use_signal(|| false);
     let mut tab = use_signal(tab_from_url);
+    // Идёт загрузка посылок другой задачи: на их месте показываем Loading,
+    // иначе видны посылки предыдущей задачи — они относятся к другому
+    // фильтру и только сбивают с толку.
+    let switching = use_signal(|| false);
 
     if started_for() != Some(contest_id) {
         started_for.set(Some(contest_id));
@@ -338,7 +354,7 @@ pub fn Contest(contest_id: i64) -> Element {
                 if let Some(contest) = &contest {
                     if let Some(problem) = &selected {
                         div { class: "flex flex-wrap gap-4 items-center",
-                            {problem_selector(problems.clone(), selected_problem)}
+                            {problem_selector(problems.clone(), selected_problem, switching)}
                             {retest_button(selected.clone(), busy)}
                         }
                         div { class: "flex flex-wrap gap-4 items-center min-h-0",
@@ -472,13 +488,17 @@ pub fn Contest(contest_id: i64) -> Element {
                         }
                         }
                             div { class: "flex flex-col gap-4 flex-1 min-h-0 min-w-0",
-                                Submissions {
-                                    submissions: submissions.clone(),
-                                    problem: problem.clone(),
-                                    contest_hide_solutions: contest.solutions_hidden,
-                                    contest_can_manage: can_manage,
-                                    all_submissions_allowed: can_manage,
-                                    on_changed: move |_| {},
+                                if switching() {
+                                    Loading {}
+                                } else {
+                                    Submissions {
+                                        submissions: submissions.clone(),
+                                        problem: problem.clone(),
+                                        contest_hide_solutions: contest.solutions_hidden,
+                                        contest_can_manage: can_manage,
+                                        all_submissions_allowed: can_manage,
+                                        on_changed: move |_| {},
+                                    }
                                 }
                             }
                         } else {
@@ -512,7 +532,7 @@ pub fn Contest(contest_id: i64) -> Element {
                             },
                         }
                         div { class: "flex flex-wrap gap-4 items-center",
-                            {problem_selector(problems.clone(), selected_problem)}
+                            {problem_selector(problems.clone(), selected_problem, switching)}
                             {retest_button(selected.clone(), busy)}
                         }
                     }

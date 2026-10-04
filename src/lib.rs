@@ -140,16 +140,27 @@ fn GuardLayout() -> Element {
                     }
                 }
                 div { class: "flex-1" }
-                select {
-                    class: "select select-ghost select-sm bg-base-200",
-                    value: "{lang}",
-                    onchange: move |ev| {
-                        let value = ev.value();
-                        STATE.write().language = value.clone();
-                        crate::state::save_language(&value);
-                    },
-                    option { value: "ru", "русский" }
-                    option { value: "en", "english" }
+                // Переключатель языка — кнопками, как фильтры статусов:
+                // вариантов всего два, текущий виден сразу, переключение
+                // в одно нажатие. Названия языков не переводим.
+                div { class: "flex items-center gap-1 rounded-lg border border-base-300 bg-base-200 p-0.5",
+                    for (code, title) in [("ru", "русский"), ("en", "english")] {
+                        button {
+                            class: if lang == *code {
+                                "btn btn-xs btn-primary"
+                            } else {
+                                "btn btn-xs btn-ghost"
+                            },
+                            onclick: {
+                                let code = code.to_string();
+                                move |_| {
+                                    STATE.write().language = code.clone();
+                                    crate::state::save_language(&code);
+                                }
+                            },
+                            "{title}"
+                        }
+                    }
                 }
             }
         }

@@ -1,3 +1,6 @@
+use std::collections::{HashMap, HashSet};
+use std::sync::Mutex;
+
 use dioxus::prelude::*;
 use futures_util::{FutureExt, SinkExt, StreamExt};
 use gloo_net::websocket::Message;
@@ -8,7 +11,7 @@ use crate::{
     alerts::{AlertKind, show_alert},
     i18n,
     models::contests::ContestEvent,
-    state::STATE,
+    state::{ContestStatus, STATE, contest_status},
 };
 
 /// Вставка/замена с сохранением серверного порядка (`c.id desc`):
@@ -78,6 +81,82 @@ async fn reload_questions(contest_id: i64) {
     };
     if let Ok(questions) = res {
         STATE.write().questions = questions;
+    }
+}
+
+/// Прошлый известный статус каждого контеста: по нему видно, что контест
+/// только что стартовал или закончился.
+static LAST_STATUS: Mutex<Option<HashMap<i64, ContestStatus>>> = Mutex::new(None);
+
+/// Перечитывает контест, у которого сменился статус.
+///
+/// События «контест начался/закончился» в ленте нет, а сам статус выводится
+/// из `finishes_at` против `Utc::now()` и меняется без нашего участия. Поэтому
+/// сверяемся с предыдущим снимком и при расхождении делаем GET:
+///
+/// - на старте — чтобы появились условия (они закрыты до начала);
+/// - на финише — чтобы появился разбор при включённой дорешке.
+///
+/// Вызывается из heartbeat-тика `ws_loop`, поэтому работает и на странице
+/// списка (лента), и на странице контеста (его сокет). Дублировать запросы
+/// не выйдет: снимок обновляется сразу, и второй сокет расхождений не увидит.
+async fn refresh_contests_on_status_change() {
+    let now: Vec<(i64, ContestStatus)> = STATE
+        .read()
+        .contests
+        .iter()
+        .map(|c| (c.id, contest_status(c)))
+        .collect();
+
+    let changed: Vec<(i64, ContestStatus)> = {
+        let Ok(mut guard) = LAST_STATUS.lock() else {
+            return;
+        };
+        let Some(snapshot) = guard.as_ref() else {
+            // Первый вызов: состояние только что загрузили, перечитывать нечего.
+            // Запоминаем снимок, с которого будем сравнивать дальше.
+            *guard = Some(now.into_iter().collect());
+            return;
+        };
+        let changed: Vec<(i64, ContestStatus)> = now
+            .into_iter()
+            .filter(|(id, status)| snapshot.get(id) != Some(status))
+            .collect();
+        // Снимок обновляем сразу, до await: иначе два сокета (страница контеста и
+        // лента списка) за один тик запросят одно и то же дважды.
+        *guard = Some(
+            STATE
+                .read()
+                .contests
+                .iter()
+                .map(|c| (c.id, contest_status(c)))
+                .collect(),
+        );
+        changed
+    };
+    if changed.is_empty() {
+        return;
+    }
+
+    let known: HashSet<i64> = STATE.read().contests.iter().map(|c| c.id).collect();
+    {
+        let Ok(mut guard) = LAST_STATUS.lock() else {
+            return;
+        };
+        if let Some(map) = guard.as_mut() {
+            // Отсекаем протухшие id, чтобы снимок не рос бесконечно.
+            map.retain(|id, _| known.contains(id));
+        }
+    }
+
+    for (id, status) in changed {
+        let started = status == ContestStatus::Ongoing;
+        refresh_contest(id).await;
+        // Условия перечитываем только для открытого контеста: STATE.contest_problems
+        // принадлежит той странице, чей сокет открыт. У неё же мы и подписаны.
+        if started && crate::state::WS_SUBSCRIBED.read().contains(&id) {
+            reload_problems(id).await;
+        }
     }
 }
 
@@ -181,6 +260,7 @@ where
                     if sink.send(Message::Text(WS_HEARTBEAT.into())).await.is_err() {
                         break;
                     }
+                    refresh_contests_on_status_change().await;
                 }
             }
         }

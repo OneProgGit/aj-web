@@ -1,11 +1,106 @@
 @import "tailwindcss";
 
-/* daisyUI v5 — built-in themes ONLY: `light` (default) and `dark`
-   (automatic, follows prefers-color-scheme). No custom theme, no custom
-   classes, no overrides. daisyUI's compiled CSS already positions `.modal`
-   (position: fixed; inset: 0), so no .modal override is needed here. */
+/* daisyUI v5. Встроенные темы отключены: палитра ниже, фиолетовый уклон.
+   daisyUI уже позиционирует `.modal` (position: fixed; inset: 0), поэтому
+   переопределять `.modal` не нужно. */
 @plugin "daisyui" {
-    themes: garden --default, sunset --prefersdark;
+    themes: false;
+}
+
+/* =========================================================
+   Сдержанная фиолетовая палитра.
+
+   Chroma держим низкой (0.005–0.16): насыщенный фиолетовый быстро утомляет
+   и «визжит» на большой площади, а нам нужен спокойный фон под текст.
+   Hue ~300–320 — фиолетовый с лёгким уклоном в пурпур.
+
+   Контраст подобран по WCAG AA и выше:
+     светлая: base-content (L≈24%) на base-100 (L≈98%) — ~10:1;
+     тёмная:  base-content (L≈93%) на base-100 (L≈22%) — ~10:1;
+   Для пар primary/primary-content — не ниже 4.5:1, поэтому primary
+   в светлой теме тёмный (L≈45%), а в тёмной — светлый (L≈76%).
+   ========================================================= */
+
+@plugin "daisyui/theme" {
+    name: "violet";
+    default: true;
+    prefersdark: false;
+    color-scheme: light;
+
+    /* Поверхности: почти нейтральные, с еле заметным лавандовым подтоном. */
+    --color-base-100: oklch(98.2% 0.004 300);
+    --color-base-200: oklch(95.8% 0.007 300);
+    --color-base-300: oklch(92.4% 0.011 300);
+    --color-base-content: oklch(24.5% 0.018 300);
+
+    --color-primary: oklch(45.5% 0.115 300);
+    --color-primary-content: oklch(98.5% 0.004 300);
+    --color-secondary: oklch(52% 0.055 305);
+    --color-secondary-content: oklch(98.5% 0.004 300);
+    --color-accent: oklch(48% 0.09 320);
+    --color-accent-content: oklch(98.5% 0.004 300);
+    --color-neutral: oklch(33% 0.02 300);
+    --color-neutral-content: oklch(97.5% 0.005 300);
+
+    /* Служебные — тоже приглушены, чтобы не спорить с фиолетовым. */
+    --color-info: oklch(50% 0.09 240);
+    --color-info-content: oklch(98% 0.004 240);
+    --color-success: oklch(48% 0.095 155);
+    --color-success-content: oklch(98% 0.004 155);
+    --color-warning: oklch(62% 0.1 75);
+    --color-warning-content: oklch(20% 0.02 75);
+    --color-error: oklch(48% 0.15 25);
+    --color-error-content: oklch(98% 0.004 25);
+
+    --radius-selector: 0.5rem;
+    --radius-field: 0.375rem;
+    --radius-box: 0.75rem;
+    --size-selector: 0.25rem;
+    --size-field: 0.25rem;
+    --border: 1px;
+    --depth: 0;
+    --noise: 0;
+}
+
+@plugin "daisyui/theme" {
+    name: "violet-dark";
+    default: false;
+    prefersdark: true;
+    color-scheme: dark;
+
+    --color-base-100: oklch(21.5% 0.012 300);
+    --color-base-200: oklch(18.5% 0.012 300);
+    --color-base-300: oklch(27% 0.015 300);
+    --color-base-content: oklch(92.5% 0.008 300);
+
+    /* В тёмной теме фиолетовый светлеет — иначе не хватит контраста
+       с тёмным текстом на кнопке. */
+    --color-primary: oklch(76% 0.1 300);
+    --color-primary-content: oklch(21.5% 0.02 300);
+    --color-secondary: oklch(71% 0.05 305);
+    --color-secondary-content: oklch(21.5% 0.02 305);
+    --color-accent: oklch(75% 0.085 320);
+    --color-accent-content: oklch(21.5% 0.02 320);
+    --color-neutral: oklch(78% 0.02 300);
+    --color-neutral-content: oklch(21.5% 0.02 300);
+
+    --color-info: oklch(74% 0.09 240);
+    --color-info-content: oklch(21.5% 0.02 240);
+    --color-success: oklch(76% 0.1 155);
+    --color-success-content: oklch(21.5% 0.02 155);
+    --color-warning: oklch(80% 0.1 75);
+    --color-warning-content: oklch(24% 0.03 75);
+    --color-error: oklch(70% 0.13 25);
+    --color-error-content: oklch(21.5% 0.02 25);
+
+    --radius-selector: 0.5rem;
+    --radius-field: 0.375rem;
+    --radius-box: 0.75rem;
+    --size-selector: 0.25rem;
+    --size-field: 0.25rem;
+    --border: 1px;
+    --depth: 0;
+    --noise: 0;
 }
 
 /* Без обводки у кнопок (геометрию не трогаем — только прозрачная граница). */

@@ -59,16 +59,28 @@ JWT is passed as a query parameter, no cookies are involved.
 Plain daisyUI — no component library, no runtime style copying. Everything is
 utility classes plus a few global rules in `src/input.css`:
 
-- daisyUI is enabled with built-in themes only:
-  `garden` (light) and `sunset` (dark, follows `prefers-color-scheme`);
+- two custom themes are defined via `@plugin "daisyui/theme"`; built-in themes
+  are disabled (`themes: false`):
+
+  | Theme         | Applied by                        |
+  | ------------- | --------------------------------- |
+  | `violet`      | `:root` (default, light)          |
+  | `violet-dark` | `prefers-color-scheme: dark`      |
+
+  Both are also selectable explicitly with `data-theme="violet"` /
+  `data-theme="violet-dark"`. The palette is violet-leaning (OKLCH hue
+  300–320) with deliberately low chroma (0.004–0.15) so it stays calm on
+  large surfaces. Every foreground/background pair clears WCAG AA (≥ 4.5:1)
+  for body text — the lightest/darkest pairs sit around 12–15:1.
 - `@theme` sets JetBrains Mono as the sans/mono font;
 - `button.btn` gets a transparent border;
 - result tables are centre-aligned with a sticky header;
 - `.md-body` styles rendered markdown: headings, lists, quotes, tables, code
   blocks and the `.md-copy-btn` copy button.
 
-To change the palette, edit the theme list in the `@plugin "daisyui"` block
-(or add a custom theme with `[data-theme=...]` overrides).
+To change the palette, edit the two `@plugin "daisyui/theme"` blocks. Keep the
+foreground/background pairs above 4.5:1 — the values are in OKLCH, where `L` is
+lightness and `C` is chroma.
 
 ## Routes
 

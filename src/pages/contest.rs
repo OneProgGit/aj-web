@@ -1,3 +1,4 @@
+use chrono::Utc;
 use dioxus::prelude::*;
 use dioxus_web::WebEventExt;
 use wasm_bindgen::JsCast;
@@ -231,6 +232,67 @@ pub fn Contest(contest_id: i64) -> Element {
             load_contest_state(contest_id, 0, false, true).await;
             crate::components::contest_ws::contest_ws(contest_id);
             loaded.set(true);
+        });
+    }
+
+    // События об окончании контеста в ленте нет (ContestUpdated приходит только
+    // при правках), а по окончании сервер начинает отдавать разбор при
+    // включённой дорешке. Поэтому сами перезапрашиваем контест, когда время
+    // вышло.
+    let mut finish_watched = use_signal(|| false);
+    if !finish_watched() {
+        finish_watched.set(true);
+        let loaded_signal = loaded;
+        spawn(async move {
+            use gloo_timers::future::TimeoutFuture;
+            // Сначала ждём первичную загрузку: до неё контеста в STATE нет,
+            // иначе цикл вышел бы сразу и сделал лишний GET при каждом открытии.
+            while !loaded_signal() {
+                TimeoutFuture::new(300).await;
+            }
+            // Если к этому моменту контест уже закончился, первичная загрузка
+            // его учла — повторный GET не нужен.
+            let already_finished = STATE
+                .read()
+                .contests
+                .iter()
+                .find(|c| c.id == contest_id)
+                .is_some_and(|c| c.finishes_at <= Utc::now());
+            if already_finished {
+                return;
+            }
+            // Ждём момента окончания. Тик в полминуты, а не один setTimeout:
+            // так ловим и короткие контесты, и не упираемся в u32 миллисекунд.
+            loop {
+                let finishes_at = STATE
+                    .read()
+                    .contests
+                    .iter()
+                    .find(|c| c.id == contest_id)
+                    .map(|c| c.finishes_at);
+                match finishes_at {
+                    Some(t) => {
+                        let left = (t - Utc::now()).num_milliseconds();
+                        if left <= 0 {
+                            break;
+                        }
+                        TimeoutFuture::new(left.min(30_000) as u32).await;
+                    }
+                    // Контест пропал из состояния (например, скрыли) —
+                    // ждём и пробуем снова.
+                    None => TimeoutFuture::new(5_000).await,
+                }
+            }
+            // На момент finishes_at сервер может ещё отдавать контест как
+            // незавершённый, поэтому небольшая задержка перед GET.
+            TimeoutFuture::new(1500).await;
+            let token = crate::state::token();
+            if let Ok(fresh) = api::contests::get_contest(contest_id, &token).await {
+                let mut state = STATE.write();
+                if let Some(slot) = state.contests.iter_mut().find(|c| c.id == contest_id) {
+                    *slot = fresh;
+                }
+            }
         });
     }
     if !loaded() {

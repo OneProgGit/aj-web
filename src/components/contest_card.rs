@@ -13,21 +13,25 @@ use super::{
     icon::{Icon, icon_element},
 };
 
-/// Total duration in human units (`3 дн 2 ч`), no seconds.
+/// Total duration in human units (`3 дн 2 ч 5 мин 7 с`). Секунды показываем:
+/// без них длительность округлялась до минут и в contests на 90 минут
+/// отображалось «1 ч 30 мин» вместо точного значения.
 fn format_duration(lang: &str, dur: chrono::Duration) -> String {
-    let m = dur.num_minutes().max(0);
-    let (d, h, mm) = (m / 1440, m % 1440 / 60, m % 60);
-    let (du, hu, mu) = if lang == "en" {
-        ("d", "h", "min")
+    let s = dur.num_seconds().max(0);
+    let (d, h, m, sec) = (s / 86400, s % 86400 / 3600, s % 3600 / 60, s % 60);
+    let (du, hu, mu, su) = if lang == "en" {
+        ("d", "h", "min", "s")
     } else {
-        ("дн", "ч", "мин")
+        ("дн", "ч", "мин", "с")
     };
     if d > 0 {
-        format!("{d} {du} {h} {hu} {mm} {mu}")
+        format!("{d} {du} {h} {hu} {m} {mu} {sec} {su}")
     } else if h > 0 {
-        format!("{h} {hu} {mm} {mu}")
+        format!("{h} {hu} {m} {mu} {sec} {su}")
+    } else if m > 0 {
+        format!("{m} {mu} {sec} {su}")
     } else {
-        format!("{mm} {mu}")
+        format!("{sec} {su}")
     }
 }
 

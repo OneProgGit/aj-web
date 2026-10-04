@@ -138,16 +138,22 @@ pub fn Problems() -> Element {
                         r#type: "checkbox",
                         class: "toggle toggle-sm",
                         checked: all_problems(),
+                        // Гасим на время запроса — иначе два конкурирующих
+                        // запроса решат, какой список останется, и значение
+                        // тумблера может разойтись с показанным списком.
+                        disabled: loading(),
                         onchange: move |ev| {
                             let new_value = ev.checked();
                             all_problems.set(new_value);
                             let token = crate::state::token();
+                            loading.set(true);
                             spawn(async move {
                                 let res = if new_value {
                                     api::problems::get_all_problems(&token).await
                                 } else {
                                     api::problems::get_my_problems(&token).await
                                 };
+                                loading.set(false);
                                 match res {
                                     Ok(list) => STATE.write().problems = list,
                                     Err(e) => show_alert(AlertKind::Error, e),

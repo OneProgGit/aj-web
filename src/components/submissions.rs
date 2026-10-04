@@ -115,6 +115,7 @@ pub fn Submissions(props: SubmissionsProps) -> Element {
                                         r#type: "checkbox",
                                         class: "toggle toggle-sm",
                                         checked: STATE.read().all_submissions,
+                                        disabled: pending(),
                                         onchange: move |ev| {
                                             let checked = ev.checked();
                                             STATE.write().all_submissions = checked;
@@ -122,6 +123,13 @@ pub fn Submissions(props: SubmissionsProps) -> Element {
                                         },
                                     }
                                     span { class: "label-text", "{i18n::tr(&lang, \"все посылки\", \"all submissions\")}" }
+                                    // Список посылок остаётся на месте, поэтому
+                                    // здесь индикатор компактный, а не страничный
+                                    // Loading: перезагрузка быстрая и большой
+                                    // спиннер просто мигает.
+                                    if pending() {
+                                        span { class: "loading loading-spinner loading-xs" }
+                                    }
                                 }
                             }
                             button {

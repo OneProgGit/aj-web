@@ -94,25 +94,27 @@ pub fn Home() -> Element {
                     r#type: "checkbox",
                     class: "toggle toggle-sm",
                     checked: STATE.read().contests_is_all,
+                    // Пока идёт перезагрузка списка, переключатель гасим:
+                    // иначе можно дёрнуть его второй раз и получить
+                    // два конкурирующих запроса — какой ответ придёт последним,
+                    // тот и победит, а значение тумблера может не совпасть
+                    // с показанным списком.
+                    disabled: loading(),
                     onchange: move |ev| {
                         let new_value = ev.checked();
                         STATE.write().contests_is_all = new_value;
                         let token = crate::state::token();
+                        loading.set(true);
                         spawn(async move {
-                            if new_value {
-                                match api::contests::get_contests(&token).await {
-                                    Ok(list) => {
-                                        STATE.write().contests = list;
-                                    }
-                                    Err(e) => show_alert(AlertKind::Error, e),
-                                }
+                            let res = if new_value {
+                                api::contests::get_contests(&token).await
                             } else {
-                                match api::contests::get_my_contests(&token).await {
-                                    Ok(list) => {
-                                        STATE.write().contests = list;
-                                    }
-                                    Err(e) => show_alert(AlertKind::Error, e),
-                                }
+                                api::contests::get_my_contests(&token).await
+                            };
+                            loading.set(false);
+                            match res {
+                                Ok(list) => STATE.write().contests = list,
+                                Err(e) => show_alert(AlertKind::Error, e),
                             }
                         });
                     },

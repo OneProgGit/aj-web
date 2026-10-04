@@ -1,16 +1,18 @@
 use dioxus::prelude::*;
 
 use crate::{
-    api,
-    components::icon::icon_slot,
-    i18n,
+    api, i18n,
     models::{problems::PublicProblemConfig, testing::Submission, verdicts::TestingVerdict},
     state::STATE,
 };
 
 use super::{
-    datetime_text::DateTimeText, icon::Icon, loading::Loading, markdown::Markdown,
-    user_link::UserLink, verdict_badge::VerdictBadge,
+    datetime_text::DateTimeText,
+    icon::{Icon, icon_element},
+    loading::Loading,
+    markdown::Markdown,
+    user_link::UserLink,
+    verdict_badge::VerdictBadge,
 };
 
 /// «Посылки» table. Mirrors `AJSubmissions`. Clicking «подробнее» opens a
@@ -89,7 +91,7 @@ pub fn Submissions(props: SubmissionsProps) -> Element {
                 div { class: "modal-box max-w-4xl", style: "max-height: 85dvh;",
                     div { class: "flex items-center justify-between",
                         h3 { class: "card-title", span { "{title}" } }
-                        m3e-icon-button { onclick: move |_| details.set(None), "✕" }
+                        button { class: "btn btn-sm btn-circle btn-ghost", onclick: move |_| details.set(None), "✕" }
                     }
                     SubmissionDetail {
                         submission: submission.clone(),
@@ -109,11 +111,12 @@ pub fn Submissions(props: SubmissionsProps) -> Element {
                         div { class: "flex items-center gap-4",
                             if all_submissions_allowed {
                                 label { class: "label cursor-pointer justify-start gap-2",
-                                    m3e-switch {
-
+                                    input {
+                                        r#type: "checkbox",
+                                        class: "checkbox checkbox-sm",
                                         checked: STATE.read().all_submissions,
-                                        onchange: move |_| {
-                                            let checked = !STATE.read().all_submissions;
+                                        onchange: move |ev| {
+                                            let checked = ev.checked();
                                             STATE.write().all_submissions = checked;
                                             reload();
                                         },
@@ -121,11 +124,11 @@ pub fn Submissions(props: SubmissionsProps) -> Element {
                                     span { class: "label-text", "{i18n::tr(&lang, \"все посылки\", \"all submissions\")}" }
                                 }
                             }
-                            m3e-button {
-                                variant: "text",
+                            button {
+                                class: "btn btn-ghost btn-sm gap-1",
                                 disabled: pending(),
                                 onclick: move |_| reload(),
-                                {icon_slot(Icon::Update, 14)}
+                                {icon_element(Icon::Update, 14)}
                                 span { "{i18n::tr(&lang, \"обновить\", \"reload\")}" }
                             }
                         }
@@ -165,8 +168,8 @@ pub fn Submissions(props: SubmissionsProps) -> Element {
                                             td { class: if s.verdict == TestingVerdict::Ok { "font-bold" } else { "" }, "{s.score}" }
                                             td {
                                                 if show_download {
-                                                    m3e-button {
-                                                        variant: "text",
+                                                    button {
+                                                        class: "btn btn-ghost btn-sm gap-1",
                                                         onclick: {
                                                             let token = STATE.read().token.clone();
                                                             let filename = format!("solution.{}", s.language.file_ext());
@@ -183,15 +186,15 @@ pub fn Submissions(props: SubmissionsProps) -> Element {
                                             });
                                         }
                                                         },
-                                                        {icon_slot(Icon::Download, 14)}
+                                                        {icon_element(Icon::Download, 14)}
                                                     }
                                                 }
                                             }
                                             td {
-                                                m3e-button {
-                                                    variant: "text",
+                                                button {
+                                                    class: "btn btn-ghost btn-sm gap-1",
                                                     onclick: move |_| details.set(Some(s.clone())),
-                                                    {icon_slot(Icon::Info, 14)}
+                                                    {icon_element(Icon::Info, 14)}
                                                 }
                                             }
                                         }
@@ -294,59 +297,28 @@ fn SubmissionDetail(props: SubmissionDetailProps) -> Element {
             div { class: "flex flex-col gap-2",
                 if tab() == 0 {
                     div { class: "flex flex-col gap-2 max-h-96 overflow-y-auto",
-                        for (i, r) in submission.subgroups_results.iter().enumerate() {
-                            m3e-card {
-                                variant: "filled",
-                                class: "w-full",
-                                div { slot: "header",
-                                    span { class: "font-medium", "##{i}" }
-                                }
-                                div { slot: "content",
-                                    div { class: "flex flex-col gap-1",
-                                        div { class: "flex justify-between gap-4",
-                                            span { class: "text-sm", "{i18n::tr(&lang, \"вердикт\", \"verdict\")}" }
-                                            span { class: "text-sm font-medium", "{crate::i18n::subgroup_verdict_text(&lang, &r.verdict)}" }
-                                        }
-                                        div { class: "flex justify-between gap-4",
-                                            span { class: "text-sm", "{i18n::tr(&lang, \"тест\", \"test\")}" }
-                                            span { class: "text-sm font-medium", "{r.test}" }
-                                        }
-                                        if let Some(score) = r.score {
-                                            div { class: "flex justify-between gap-4",
-                                                span { class: "text-sm", "{i18n::tr(&lang, \"баллы\", \"score\")}" }
-                                                span { class: "text-sm font-medium", "{score}" }
-                                            }
-                                        }
-                                    }
-                                }
+                    for (i, r) in submission.subgroups_results.iter().enumerate() {
+                        div { class: "bg-base-300 rounded p-4 text-base-content",
+                            p { class: "font-medium", "##{i}" }
+                            div { class: "flex justify-between", span { class: "text-sm", "{i18n::tr(&lang, \"вердикт\", \"verdict\")}" }, span { class: "text-sm italic font-medium border border-neutral/50 rounded px-2 py-0.5", "{crate::i18n::subgroup_verdict_text(&lang, &r.verdict)}" } }
+                            div { class: "flex justify-between", span { class: "text-sm", "{i18n::tr(&lang, \"тест\", \"test\")}" }, span { class: "text-sm italic", "{r.test}" } }
+                            if let Some(score) = r.score {
+                                div { class: "flex justify-between", span { class: "text-sm", "{i18n::tr(&lang, \"баллы\", \"score\")}" }, span { class: "text-sm italic", "{score}" } }
                             }
                         }
                     }
+                    }
                 } else if tab() == 1 {
                     div { class: "flex flex-col gap-2 max-h-96 overflow-y-auto",
-                        for (i, t) in submission.tests_results.iter().enumerate() {
-                            m3e-card {
-                                variant: "filled",
-                                class: "w-full",
-                                div { slot: "header",
-                                    span { class: "font-medium", "##{i + 1}" }
-                                }
-                                div { slot: "content",
-                                    div { class: "flex flex-col gap-1",
-                                        div { class: "flex justify-between gap-4",
-                                            span { class: "text-sm", "{i18n::tr(&lang, \"вердикт\", \"verdict\")}" }
-                                            span { class: "text-sm font-medium", "{crate::i18n::test_verdict_text(&lang, &t.verdict)}" }
-                                        }
-                                        if let Some(score) = t.score {
-                                            div { class: "flex justify-between gap-4",
-                                                span { class: "text-sm", "{i18n::tr(&lang, \"баллы\", \"score\")}" }
-                                                span { class: "text-sm font-medium", "{score}" }
-                                            }
-                                        }
-                                    }
-                                }
+                    for (i, t) in submission.tests_results.iter().enumerate() {
+                        div { class: "bg-base-300 rounded p-4 text-base-content",
+                            p { class: "font-medium", "##{i + 1}" }
+                            div { class: "flex justify-between", span { class: "text-sm", "{i18n::tr(&lang, \"вердикт\", \"verdict\")}" }, span { class: "text-sm italic font-medium border border-neutral/50 rounded px-2 py-0.5", "{crate::i18n::test_verdict_text(&lang, &t.verdict)}" } }
+                            if let Some(score) = t.score {
+                                div { class: "flex justify-between", span { class: "text-sm", "{i18n::tr(&lang, \"баллы\", \"score\")}" }, span { class: "text-sm italic", "{score}" } }
                             }
                         }
+                    }
                     }
                 } else if let Some(text) = code_block.filter(|_| show_code) {
                     // Скроллится только код внутри блока (шапка с языком

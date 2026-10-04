@@ -3,8 +3,11 @@ use dioxus::prelude::*;
 use crate::{
     alerts::{AlertKind, show_alert},
     api,
-    components::icon::icon_slot,
-    components::{icon::Icon, markdown::MdField, post_card::PostCard},
+    components::{
+        icon::{Icon, icon_element},
+        markdown::MdField,
+        post_card::PostCard,
+    },
     i18n,
     models::contests::ContestPostRequest,
     state::STATE,
@@ -44,10 +47,10 @@ pub fn ContestAnnouncements(contest_id: i64) -> Element {
                 h1 { class: "text-2xl font-bold", "{i18n::tr(&lang, \"Объявления в контесте\", \"Contest announcements\")}" }
 
                 if can_create {
-                    m3e-button {
-                        variant: "tonal",
+                    button {
+                        class: "btn btn-neutral btn-sm gap-1",
                         onclick: move |_| modal_open.set(true),
-                        {icon_slot(Icon::Plus, 16)}
+                        {icon_element(Icon::Plus, 16)}
                         span { "{i18n::tr(&lang, \"создать\", \"create\")}" }
                     }
                 }
@@ -76,39 +79,37 @@ pub fn ContestAnnouncements(contest_id: i64) -> Element {
                     div { class: "modal-box max-w-2xl",
                         div { class: "flex items-center justify-between",
                             h3 { class: "card-title", "{i18n::tr(&lang, \"Создать объявление\", \"Create post\")}" }
-                            m3e-icon-button { onclick: move |_| modal_open.set(false), "✕" }
+                            button { class: "btn btn-sm btn-circle btn-ghost", onclick: move |_| modal_open.set(false), "✕" }
                         }
                         div { class: "flex flex-col gap-3 mt-4",
-                            m3e-form-field {
-                            span { slot: "label", "{i18n::tr(&lang, \"название (рус.)\", \"title (ru)\")}" }
-                                input {
-                                    value: title_ru(),
-                                    oninput: move |ev| title_ru.set(ev.value()),
-                                }
+                            span { class: "label-text", "{i18n::tr(&lang, \"название (рус.)\", \"title (ru)\")}" }
+                            input {
+                                class: "input input-bordered",
+                                value: title_ru(),
+                                oninput: move |ev| title_ru.set(ev.value()),
                             }
                             MdField {
                                 value: text_ru,
                                 label: i18n::tr(&lang, "текст (рус.)", "text (ru)"),
                             }
-                            m3e-form-field {
-                            span { slot: "label", "{i18n::tr(&lang, \"название (англ.)\", \"title (en)\")}" }
-                                input {
-                                    value: title_en(),
-                                    oninput: move |ev| title_en.set(ev.value()),
-                                }
+                            span { class: "label-text", "{i18n::tr(&lang, \"название (англ.)\", \"title (en)\")}" }
+                            input {
+                                class: "input input-bordered",
+                                value: title_en(),
+                                oninput: move |ev| title_en.set(ev.value()),
                             }
                             MdField {
                                 value: text_en,
                                 label: i18n::tr(&lang, "текст (англ.)", "text (en)"),
                             }
                             div { class: "card-actions justify-end",
-                                m3e-button {
-                                    variant: "text",
+                                button {
+                                    class: "btn btn-ghost btn-sm gap-1",
                                     onclick: move |_| modal_open.set(false),
                                     span { "{i18n::tr(&lang, \"отменить\", \"cancel\")}" }
                                 }
-                                m3e-button {
-                                    variant: "filled",
+                                button {
+                                    class: "btn btn-primary btn-sm gap-1",
                                     disabled: !valid,
                                     onclick: {
                                         move |_| {
@@ -130,7 +131,7 @@ pub fn ContestAnnouncements(contest_id: i64) -> Element {
                                             });
                                         }
                                     },
-                                    {icon_slot(if valid { Icon::Plus } else { Icon::CircleBackslash }, 16)}
+                                    {icon_element(if valid { Icon::Plus } else { Icon::CircleBackslash }, 16)}
                                     span { "{i18n::tr(&lang, \"создать\", \"create\")}" }
                                 }
                             }

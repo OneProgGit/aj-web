@@ -3,7 +3,6 @@ use dioxus::prelude::*;
 use crate::{
     alerts::{AlertKind, show_alert},
     api,
-    components::icon::icon_slot,
     components::{
         admin_badge::AdminBadge,
         datetime_text::DateTimeText,
@@ -69,8 +68,8 @@ pub fn Account() -> Element {
                 }
             }
 
-            m3e-button {
-                variant: "filled",
+            button {
+                class: "btn btn-sm gap-1",
                 onclick: {
                     move |_| {
                         STATE.write().user = None;
@@ -79,15 +78,14 @@ pub fn Account() -> Element {
                         navigator.push(crate::Route::Welcome {});
                     }
                 },
-                {icon_slot(Icon::Exit, 16)}
+                {icon_element(Icon::Exit, 16)}
                 span { "{i18n::tr(&lang, \"выйти\", \"logout\")}" }
             }
 
-            m3e-button {
-                class: "error",
-                variant: "filled",
+            button {
+                class: "btn btn-error btn-sm gap-1",
                 onclick: move |_| deleting.set(!deleting()),
-                {icon_slot(Icon::Trash, 16)}
+                {icon_element(Icon::Trash, 16)}
                 span { "{i18n::tr(&lang, \"удалить аккаунт\", \"delete account\")}" }
             }
 

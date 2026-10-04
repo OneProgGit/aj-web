@@ -100,23 +100,3 @@ pub fn icon_element(icon: Icon, size: u32) -> Element {
         }
     }
 }
-
-/// Иконка для слота `icon` компонента M3E (кнопка, чип и т. п.).
-/// Без слота элемент попадает в default-слот вместе с текстом, и M3E
-/// раскладывает их в две строки.
-pub fn icon_slot(icon: Icon, size: u32) -> Element {
-    let paths = icon.path_data();
-    rsx! {
-        span { slot: "icon", style: "display: inline-flex;",
-            svg {
-                width: "{size}",
-                height: "{size}",
-                view_box: "0 0 24 24",
-                fill: "currentColor",
-                for path in paths {
-                    path { d: path }
-                }
-            }
-        }
-    }
-}

@@ -7,10 +7,9 @@ use crate::{
     api,
     components::{
         contest_card::ContestCard,
-        icon::{Icon, icon_element, icon_slot},
+        icon::{Icon, icon_element},
         loading::Loading,
         problem_card::ProblemCard,
-        select::M3Select,
         submissions::Submissions,
     },
     i18n,
@@ -65,30 +64,11 @@ fn problem_selector(
     mut selected_problem: Signal<usize>,
 ) -> Element {
     rsx! {
-        M3Select {
-            id: "aj-contest-problem",
-            label: crate::i18n::tr(&crate::state::language(), "задача", "problem"),
-            options: problems
-                .iter()
-                .enumerate()
-                .map(|(i, p)| {
-                    (
-                        i.to_string(),
-                        format!(
-                            "#{} {}",
-                            p.index + 1,
-                            crate::i18n::problem_title(
-                                &crate::state::language(),
-                                &p.name_ru,
-                                &p.name_en,
-                            )
-                        ),
-                    )
-                })
-                .collect(),
+        select {
+            class: "select select-bordered select-sm",
             value: selected_problem().to_string(),
-            onchange: Callback::new(move |value: String| {
-                let idx = value.parse::<usize>().unwrap_or(0);
+            onchange: move |ev| {
+                let idx = ev.value().parse::<usize>().unwrap_or(0);
                 selected_problem.set(idx);
                 let token = crate::state::token();
                 let all = STATE.read().all_submissions;
@@ -102,11 +82,18 @@ fn problem_selector(
                         };
                         match res {
                             Ok(subs) => STATE.write().submissions = subs,
-                            Err(e) => crate::state::show_error(e),
+                            Err(e) => show_alert(AlertKind::Error, e),
                         }
                     }
                 });
-            }),
+            },
+            for (i, p) in problems.iter().enumerate() {
+                option {
+                    value: "{i}",
+                    selected: selected_problem() == i,
+                    "#{p.index + 1} {i18n::problem_title(&crate::state::language(), &p.name_ru, &p.name_en)}"
+                }
+            }
         }
     }
 }
@@ -116,8 +103,8 @@ fn retest_button(selected: Option<PublicProblemConfig>, mut busy: Signal<bool>) 
     let lang = crate::state::language();
     rsx! {
         if selected.as_ref().is_some_and(|p| STATE.read().can_manage_problem(p)) {
-            m3e-button {
-                variant: "text",
+            button {
+                class: "btn btn-ghost btn-sm gap-1",
                 disabled: busy(),
                 onclick: {
                     let token = STATE.read().token.clone();
@@ -143,7 +130,7 @@ fn retest_button(selected: Option<PublicProblemConfig>, mut busy: Signal<bool>) 
                         });
                     }
                 },
-                {icon_slot(Icon::Update, 16)}
+                {icon_element(Icon::Update, 16)}
                 span { "{i18n::tr(&lang, \"ретест\", \"retest\")}" }
             }
         }
@@ -161,7 +148,7 @@ async fn load_contest_state(
     if force_data {
         match api::problems::get_contest_problems(contest_id, &token).await {
             Ok(list) => STATE.write().contest_problems = list,
-            Err(e) => crate::state::show_error(e),
+            Err(e) => show_alert(AlertKind::Error, e),
         }
     }
 
@@ -174,18 +161,18 @@ async fn load_contest_state(
         };
         match res {
             Ok(subs) => STATE.write().submissions = subs,
-            Err(e) => crate::state::show_error(e),
+            Err(e) => show_alert(AlertKind::Error, e),
         }
     }
 
     if force_data {
         match api::contests::get_contest_leaderboard(contest_id, &token).await {
             Ok(rows) => STATE.write().leaderboard = rows,
-            Err(e) => crate::state::show_error(e),
+            Err(e) => show_alert(AlertKind::Error, e),
         }
         match api::contests::get_contest_posts(contest_id, &token).await {
             Ok(posts) => STATE.write().posts = posts,
-            Err(e) => crate::state::show_error(e),
+            Err(e) => show_alert(AlertKind::Error, e),
         }
         match api::contests::get_contest(contest_id, &token).await {
             Ok(contest) => {
@@ -196,7 +183,7 @@ async fn load_contest_state(
                     state.contests.push(contest);
                 }
             }
-            Err(e) => crate::state::show_error(e),
+            Err(e) => show_alert(AlertKind::Error, e),
         }
         let can_manage = {
             let state = STATE.read();
@@ -212,7 +199,7 @@ async fn load_contest_state(
         };
         match questions {
             Ok(questions) => STATE.write().questions = questions,
-            Err(e) => crate::state::show_error(e),
+            Err(e) => show_alert(AlertKind::Error, e),
         }
     }
 }
@@ -222,7 +209,7 @@ pub fn Contest(contest_id: i64) -> Element {
     let lang = crate::state::language();
     let navigator = use_navigator();
     let selected_problem = use_signal(|| 0usize);
-    let language_idx = use_signal(|| 0usize);
+    let mut language_idx = use_signal(|| 0usize);
     let mut solution_bytes = use_signal(|| None::<Vec<u8>>);
     let mut solution_name = use_signal(String::new);
     let mut paste_mode = use_signal(|| false);
@@ -299,10 +286,10 @@ pub fn Contest(contest_id: i64) -> Element {
     rsx! {
         div { class: "flex flex-col gap-4 max-w-7xl mx-auto w-full contest-page", style: "height: calc(100vh - 12rem); height: calc(100dvh - 12rem); min-height: 28rem;",
             div { class: "flex flex-wrap gap-4 items-center",
-                m3e-button {
-                    variant: "text",
+                button {
+                    class: "btn btn-ghost btn-sm gap-2",
                     onclick: move |_| { let _ = navigator.push(crate::Route::Home {}); },
-                    {icon_slot(Icon::Back, 16)}
+                    {icon_element(Icon::Back, 16)}
                     span { "{i18n::tr(&lang, \"назад\", \"back\")}" }
                 }
 
@@ -354,39 +341,32 @@ pub fn Contest(contest_id: i64) -> Element {
                             {retest_button(selected.clone(), busy)}
                         }
                         div { class: "flex flex-wrap gap-4 items-center min-h-0",
-                        M3Select {
-                            id: "aj-sub-lang",
-                            label: i18n::tr(&lang, "язык", "language"),
-                            options: vec![
-                                ("0".to_string(), "Rust".to_string()),
-                                ("1".to_string(), "C".to_string()),
-                                ("2".to_string(), "C++".to_string()),
-                                ("3".to_string(), "Go".to_string()),
-                                ("4".to_string(), "Python".to_string()),
-                                ("5".to_string(), "Pascal".to_string()),
-                            ],
+                        select {
+                            class: "select select-bordered select-sm",
                             value: language_idx().to_string(),
-                            onchange: {
-                                let mut lang_idx = language_idx;
-                                Callback::new(move |value: String| {
-                                    lang_idx.set(value.parse::<usize>().unwrap_or(0));
-                                })
+                            onchange: move |ev| {
+                                language_idx.set(ev.value().parse::<usize>().unwrap_or(0));
                             },
+                            option { value: "0", "Rust" }
+                            option { value: "1", "C" }
+                            option { value: "2", "C++" }
+                            option { value: "3", "Go" }
+                            option { value: "4", "Python" }
+                            option { value: "5", "Pascal" }
                         }
 
-                        m3e-button {
-                            variant: "text",
+                        button {
+                            class: "btn btn-ghost btn-sm gap-1",
                             onclick: move |_| paste_mode.set(!paste_mode()),
-                            {icon_slot(if paste_mode() { Icon::Upload } else { Icon::Pencil }, 16)}
+                            {icon_element(if paste_mode() { Icon::Upload } else { Icon::Pencil }, 16)}
                             span { "{paste_mode_label}" }
                         }
                         if !paste_mode() {
-                            label { class: "cursor-pointer",
-                                m3e-button {
-                                    variant: "outlined",
-                                    {icon_slot(Icon::Upload, 16)}
-                                    span { "{pick_label}" }
-                                }
+                            label {
+                                r#for: "solution-file",
+                                class: "btn btn-ghost btn-sm gap-1",
+                                {icon_element(Icon::Upload, 16)}
+                                span { "{pick_label}" }
                             }
                         }
                         input {
@@ -423,22 +403,17 @@ pub fn Contest(contest_id: i64) -> Element {
                         }
 
                         if paste_mode() {
-                            m3e-form-field {
-                                span { slot: "label",
-                                    "{i18n::tr(&lang, \"код решения\", \"solution code\")}"
-                                }
-                                textarea {
-                                    class: "w-full font-mono min-h-32",
-                                    rows: "8",
-                                    placeholder: i18n::tr(&lang, "вставьте код решения", "paste solution code"),
-                                    value: paste_code(),
-                                    oninput: move |ev| paste_code.set(ev.value()),
-                                }
+                            textarea {
+                                class: "textarea textarea-bordered w-full font-mono",
+                                rows: "8",
+                                placeholder: i18n::tr(&lang, "вставьте код решения", "paste solution code"),
+                                value: paste_code(),
+                                oninput: move |ev| paste_code.set(ev.value()),
                             }
                         }
 
-                        m3e-button {
-                            variant: "filled",
+                        button {
+                            class: "btn btn-primary btn-sm gap-1",
                             disabled: busy()
                                 || if paste_mode() {
                                     paste_code().trim().is_empty()
@@ -491,7 +466,7 @@ pub fn Contest(contest_id: i64) -> Element {
                                     });
                                 }
                             },
-                            {icon_slot(Icon::PaperPlane, 16)}
+                            {icon_element(Icon::PaperPlane, 16)}
                             span { "{i18n::tr(&lang, \"отослать\", \"send\")}" }
                         }
                         }
@@ -530,7 +505,7 @@ pub fn Contest(contest_id: i64) -> Element {
                                                 state.contests.push(fresh);
                                             }
                                         }
-                                        Err(e) => crate::state::show_error(e),
+                                        Err(e) => show_alert(AlertKind::Error, e),
                                     }
                                 });
                             },

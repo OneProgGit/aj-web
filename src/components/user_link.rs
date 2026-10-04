@@ -2,7 +2,7 @@ use dioxus::prelude::*;
 
 use crate::models::users::AdminLevel;
 
-use super::icon::{Icon, icon_slot};
+use super::icon::{Icon, icon_element};
 
 /// A person-named button that navigates to a user's profile. Owners are taken
 /// to the private profile page, everyone else to the public one (mirrors
@@ -18,8 +18,8 @@ pub fn UserLink(user_id: i64, username: String) -> Element {
             .is_some_and(|u| u.admin_level == AdminLevel::Owner)
     };
     rsx! {
-        m3e-button {
-            variant: "text",
+        button {
+            class: "btn btn-ghost btn-sm gap-1",
             onclick: move |_| {
                 if is_owner {
                     navigator.push(crate::Route::UserPrivateProfile { user_id });
@@ -27,7 +27,7 @@ pub fn UserLink(user_id: i64, username: String) -> Element {
                     navigator.push(crate::Route::UserProfile { user_id });
                 }
             },
-            {icon_slot(Icon::Person, 14)}
+            {icon_element(Icon::Person, 14)}
             span { "{username}" }
         }
     }

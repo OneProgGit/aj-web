@@ -3,10 +3,12 @@ use dioxus::prelude::*;
 use crate::{
     alerts::{AlertKind, show_alert},
     api,
-    components::icon::icon_slot,
     components::{
-        admin_badge::AdminBadge, datetime_text::DateTimeText, delete_form::DeleteForm, icon::Icon,
-        loading::Loading, select::M3Select,
+        admin_badge::AdminBadge,
+        datetime_text::DateTimeText,
+        delete_form::DeleteForm,
+        icon::{Icon, icon_element},
+        loading::Loading,
     },
     i18n,
     models::{DeletionRequest, users::AdminLevel},
@@ -50,12 +52,12 @@ pub fn UserPrivateProfile(user_id: i64) -> Element {
 
     rsx! {
         div { class: "flex flex-col items-start gap-4 max-w-7xl mx-auto w-full",
-            m3e-button {
-                variant: "text",
+            button {
+                class: "btn btn-ghost btn-sm gap-2",
                 onclick: move |_| {
                     navigator.go_back();
                 },
-                {icon_slot(Icon::Back, 16)}
+                {icon_element(Icon::Back, 16)}
                 span { "{i18n::tr(&lang, \"назад\", \"back\")}" }
             }
 
@@ -93,24 +95,16 @@ pub fn UserPrivateProfile(user_id: i64) -> Element {
                     div { class: "card-body gap-3",
                         h3 { class: "card-title text-base", "{i18n::tr(&lang, \"Уровень админа\", \"Admin level\")}" }
                         div { class: "flex flex-wrap gap-4 items-center",
-                            M3Select {
-                                id: "aj-user-level",
-                                label: i18n::tr(&lang, "уровень", "level"),
-                                options: vec![
-                                    ("0".to_string(), i18n::tr(&lang, "пользователь", "user")),
-                                    ("1".to_string(), i18n::tr(&lang, "админ", "admin")),
-                                    ("2".to_string(), i18n::tr(&lang, "владелец", "owner")),
-                                ],
-                                value: level_idx().to_string(),
-                                onchange: {
-                                    let mut idx = level_idx;
-                                    Callback::new(move |value: String| {
-                                        idx.set(value.parse::<usize>().unwrap_or(0));
-                                    })
-                                },
-                            }
-                    m3e-button {
-                        variant: "filled",
+                            select {
+                        class: "select select-bordered select-sm",
+                        value: level_idx().to_string(),
+                        onchange: move |ev| level_idx.set(ev.value().parse::<usize>().unwrap_or(0)),
+                        option { value: "0", "{i18n::tr(&lang, \"пользователь\", \"user\")}" }
+                        option { value: "1", "{i18n::tr(&lang, \"админ\", \"admin\")}" }
+                        option { value: "2", "{i18n::tr(&lang, \"владелец\", \"owner\")}" }
+                    }
+                    button {
+                        class: "btn btn-primary btn-sm gap-1",
                         disabled: busy(),
                         onclick: {
                             let token = STATE.read().token.clone();
@@ -151,18 +145,17 @@ pub fn UserPrivateProfile(user_id: i64) -> Element {
                                 });
                             }
                         },
-                        {icon_slot(Icon::Pencil, 16)}
+                        {icon_element(Icon::Pencil, 16)}
                         span { "{i18n::tr(&lang, \"изменить\", \"edit\")}" }
                     }
                     }
                     }
                 }
 
-                m3e-button {
-                    class: "error",
-                    variant: "filled",
+                button {
+                    class: "btn btn-error btn-sm gap-1",
                     onclick: move |_| deleting.set(!deleting()),
-                    {icon_slot(Icon::Trash, 16)}
+                    {icon_element(Icon::Trash, 16)}
                     span { "{i18n::tr(&lang, \"удалить аккаунт\", \"delete account\")}" }
                 }
 

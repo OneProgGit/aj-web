@@ -1,15 +1,16 @@
 use dioxus::prelude::*;
 
 use crate::{
-    api,
-    components::icon::icon_slot,
-    i18n,
+    api, i18n,
     models::{DeletionRequest, contests::PublicContestConfig},
     state::{ContestStatus, STATE, contest_status},
 };
 
 use super::{
-    contest_form::contest_form, datetime_text::DateTimeText, delete_form::DeleteForm, icon::Icon,
+    contest_form::contest_form,
+    datetime_text::DateTimeText,
+    delete_form::DeleteForm,
+    icon::{Icon, icon_element},
 };
 
 /// Total duration in human units (`3 дн 2 ч`), no seconds.
@@ -51,6 +52,13 @@ fn format_remaining(lang: &str, left: chrono::Duration) -> String {
     }
 }
 
+fn yes_no(lang: &str, value: bool) -> String {
+    if value {
+        i18n::tr(lang, "да", "yes")
+    } else {
+        i18n::tr(lang, "нет", "no")
+    }
+}
 /// whether the «войти» button is rendered (contest page sets it to false).
 #[derive(Props, Clone)]
 /// Contest card. Mirrors `AJContestCard` from aj-app. `show_enter` controls
@@ -135,34 +143,34 @@ pub fn ContestCard(props: ContestCardProps) -> Element {
                 if has_url {
                     div { class: "flex flex-wrap gap-2",
                         if lang == "ru" && !contest.statements_url_ru.is_empty() {
-                            m3e-button {
-                                variant: "tonal",
+                            button {
+                                class: "btn btn-neutral btn-sm gap-1",
                                 onclick: move |_| crate::state::open_link(&statements_ru),
-                                {icon_slot(Icon::FileText, 14)}
+                                {icon_element(Icon::FileText, 14)}
                                 span { "{i18n::tr(&lang, \"условия задач\", \"statements\")}" }
                             }
                         }
                         if lang == "ru" && !contest.editorial_url_ru.is_empty() {
-                            m3e-button {
-                                variant: "tonal",
+                            button {
+                                class: "btn btn-neutral btn-sm gap-1",
                                 onclick: move |_| crate::state::open_link(&editorial_ru),
-                                {icon_slot(Icon::FileText, 14)}
+                                {icon_element(Icon::FileText, 14)}
                                 span { "{i18n::tr(&lang, \"разбор задач\", \"editorial\")}" }
                             }
                         }
                         if lang == "en" && !contest.statements_url_en.is_empty() {
-                            m3e-button {
-                                variant: "tonal",
+                            button {
+                                class: "btn btn-neutral btn-sm gap-1",
                                 onclick: move |_| crate::state::open_link(&statements_en),
-                                {icon_slot(Icon::FileText, 14)}
+                                {icon_element(Icon::FileText, 14)}
                                 span { "{i18n::tr(&lang, \"условия задач\", \"statements\")}" }
                             }
                         }
                         if lang == "en" && !contest.editorial_url_en.is_empty() {
-                            m3e-button {
-                                variant: "tonal",
+                            button {
+                                class: "btn btn-neutral btn-sm gap-1",
                                 onclick: move |_| crate::state::open_link(&editorial_en),
-                                {icon_slot(Icon::FileText, 14)}
+                                {icon_element(Icon::FileText, 14)}
                                 span { "{i18n::tr(&lang, \"разбор задач\", \"editorial\")}" }
                             }
                         }
@@ -172,8 +180,8 @@ pub fn ContestCard(props: ContestCardProps) -> Element {
                 if has_collapsed {
                     div { class: "flex items-center justify-between gap-4",
                         span { class: "text-sm", "{i18n::tr(&lang, \"владелец\", \"owner\")}" }
-                        m3e-button {
-                            variant: "tonal",
+                        button {
+                            class: "btn btn-neutral btn-sm gap-1",
                             onclick: {
                                 let owner_id = contest.owner_id.unwrap_or_default();
                                 let is_owner = STATE.read().is_owner();
@@ -185,7 +193,7 @@ pub fn ContestCard(props: ContestCardProps) -> Element {
                                     }
                                 }
                             },
-                            {icon_slot(Icon::Person, 14)}
+                            {icon_element(Icon::Person, 14)}
                             span { "{owner_login}" }
                         }
                     }
@@ -224,34 +232,33 @@ pub fn ContestCard(props: ContestCardProps) -> Element {
 
                 div { class: "flex flex-wrap items-center gap-2",
                     if (status != ContestStatus::BeforeStart || can_enter) && show_enter {
-                        m3e-button {
-                            variant: "tonal",
+                        button {
+                            class: "btn btn-neutral btn-sm gap-1",
                             onclick: {
                                 move |_| { let _ = navigator.push(crate::Route::Contest { contest_id: contest.id }); }
                             },
-                            {icon_slot(Icon::Enter, 16)}
+                            {icon_element(Icon::Enter, 16)}
                             span { "{i18n::tr(&lang, \"войти\", \"enter\")}" }
                         }
                     }
                     if can_manage {
-                        m3e-button {
-                            variant: "tonal",
+                        button {
+                            class: "btn btn-neutral btn-sm gap-1",
                             onclick: move |_| editing.set(!editing()),
-                            {icon_slot(Icon::Pencil, 16)}
+                            {icon_element(Icon::Pencil, 16)}
                             span { "{i18n::tr(&lang, \"изменить\", \"edit\")}" }
                         }
-                        m3e-button {
-                            class: "error",
-                            variant: "tonal",
+                        button {
+                            class: "btn btn-neutral btn-sm gap-1",
                             onclick: move |_| deleting.set(!deleting()),
-                            {icon_slot(Icon::Trash, 16)}
+                            {icon_element(Icon::Trash, 16)}
                             span { "{i18n::tr(&lang, \"удалить\", \"delete\")}" }
                         }
                     } else {
-                        m3e-button {
-                            variant: "tonal",
+                        button {
+                            class: "btn btn-neutral btn-sm gap-1",
                             onclick: move |_| info_open.set(!info_open()),
-                            {icon_slot(Icon::Info, 16)}
+                            {icon_element(Icon::Info, 16)}
                             span { "{i18n::tr(&lang, \"инфо\", \"info\")}" }
                         }
                     }
@@ -262,7 +269,8 @@ pub fn ContestCard(props: ContestCardProps) -> Element {
                         div { class: "modal-box max-w-2xl text-base-content",
                             div { class: "flex items-center justify-between",
                                 h3 { class: "card-title", "{i18n::tr(&lang, \"Изменить контест\", \"Edit contest\")}" }
-                                m3e-icon-button {
+                                button {
+                                    class: "btn btn-sm btn-circle btn-ghost",
                                     onclick: move |_| editing.set(false),
                                     "✕"
                                 }
@@ -294,35 +302,24 @@ pub fn ContestCard(props: ContestCardProps) -> Element {
                         div { class: "modal-box max-w-2xl text-base-content",
                             div { class: "flex items-center justify-between",
                                 h3 { class: "card-title", "{i18n::tr(&lang, \"Информация о контесте\", \"Contest info\")}" }
-                                m3e-icon-button {
+                                button {
+                                    class: "btn btn-sm btn-circle btn-ghost",
                                     onclick: move |_| info_open.set(false),
                                     "✕"
                                 }
                             }
                             div { class: "flex flex-col gap-3 mt-4",
-                                div { class: "flex items-center gap-3",
+                                div { class: "flex items-center justify-between gap-4",
                                     span { class: "text-sm", "{i18n::tr(&lang, \"дорешка\", \"upsolving\")}" }
-                                    div { class: "flex-1" },
-                                    m3e-switch {
-                                        checked: contest.upsolving_enabled,
-                                        disabled: true,
-                                    }
+                                    span { class: "text-sm italic font-semibold text-right", "{yes_no(&lang, contest.upsolving_enabled)}" }
                                 }
-                                div { class: "flex items-center gap-3",
+                                div { class: "flex items-center justify-between gap-4",
                                     span { class: "text-sm", "{i18n::tr(&lang, \"решения скрыты\", \"solutions hidden\")}" }
-                                    div { class: "flex-1" },
-                                    m3e-switch {
-                                        checked: contest.solutions_hidden,
-                                        disabled: true,
-                                    }
+                                    span { class: "text-sm italic font-semibold text-right", "{yes_no(&lang, contest.solutions_hidden)}" }
                                 }
-                                div { class: "flex items-center gap-3",
+                                div { class: "flex items-center justify-between gap-4",
                                     span { class: "text-sm", "{i18n::tr(&lang, \"таблица скрыта\", \"leaderboard hidden\")}" }
-                                    div { class: "flex-1" },
-                                    m3e-switch {
-                                        checked: contest.leaderboard_hidden,
-                                        disabled: true,
-                                    }
+                                    span { class: "text-sm italic font-semibold text-right", "{yes_no(&lang, contest.leaderboard_hidden)}" }
                                 }
                             }
                         }

@@ -1,9 +1,7 @@
 use dioxus::prelude::*;
 
 use crate::{
-    api,
-    components::icon::icon_slot,
-    i18n,
+    api, i18n,
     models::{
         DeletionRequest,
         contests::{ContestPost, ContestPostRequest},
@@ -14,7 +12,7 @@ use crate::{
 use super::{
     datetime_text::DateTimeText,
     delete_form::DeleteForm,
-    icon::Icon,
+    icon::{Icon, icon_element},
     markdown::{Markdown, MdField},
     user_link::UserLink,
 };
@@ -75,17 +73,16 @@ pub fn PostCard(props: PostCardProps) -> Element {
 
                 if can_manage {
                     div { class: "flex items-center gap-2",
-                        m3e-button {
-                            variant: "text",
+                        button {
+                            class: "btn btn-ghost btn-sm gap-1",
                             onclick: move |_| editing.set(!editing()),
-                            {icon_slot(Icon::Pencil, 16)}
+                            {icon_element(Icon::Pencil, 16)}
                             span { "{i18n::tr(&lang, \"изменить\", \"edit\")}" }
                         }
-                        m3e-button {
-                            class: "error-text",
-                            variant: "text",
+                        button {
+                            class: "btn btn-ghost btn-sm gap-1 text-error",
                             onclick: move |_| deleting.set(!deleting()),
-                            {icon_slot(Icon::Trash, 16)}
+                            {icon_element(Icon::Trash, 16)}
                             span { "{i18n::tr(&lang, \"удалить\", \"delete\")}" }
                         }
                     }
@@ -95,7 +92,8 @@ pub fn PostCard(props: PostCardProps) -> Element {
                             div { class: "modal-box max-w-2xl",
                                 div { class: "flex items-center justify-between",
                                     h3 { class: "card-title", "{i18n::tr(&lang, \"Изменить объявление\", \"Edit announcement\")}" }
-                                    m3e-icon-button {
+                                    button {
+                                        class: "btn btn-sm btn-circle btn-ghost",
                                         onclick: move |_| editing.set(false),
                                         "✕"
                                     }
@@ -157,36 +155,28 @@ fn post_edit_form(
 
     rsx! {
         div { class: "flex flex-col gap-3",
-            m3e-form-field {
-            span { slot: "label", "{i18n::tr(&lang, \"название (рус.)\", \"title (ru)\")}" }
-                input {
-                    value: title_ru(),
-                    oninput: move |ev| title_ru.set(ev.value()),
-                }
-            }
+            span { class: "label-text", "{i18n::tr(&lang, \"название (рус.)\", \"title (ru)\")}" }
+            input { class: "input input-bordered",
+                value: title_ru(), oninput: move |ev| title_ru.set(ev.value()) }
             MdField {
                 value: text_ru,
                 label: i18n::tr(&lang, "текст (рус.)", "text (ru)"),
             }
-            m3e-form-field {
-            span { slot: "label", "{i18n::tr(&lang, \"название (англ.)\", \"title (en)\")}" }
-                input {
-                    value: title_en(),
-                    oninput: move |ev| title_en.set(ev.value()),
-                }
-            }
+            span { class: "label-text", "{i18n::tr(&lang, \"название (англ.)\", \"title (en)\")}" }
+            input { class: "input input-bordered",
+                value: title_en(), oninput: move |ev| title_en.set(ev.value()) }
             MdField {
                 value: text_en,
                 label: i18n::tr(&lang, "текст (англ.)", "text (en)"),
             }
             div { class: "card-actions justify-end",
-                m3e-button {
-                    variant: "text",
+                button {
+                    class: "btn btn-ghost btn-sm gap-1",
                     onclick: move |ev| on_cancel.call(ev),
                     span { "{i18n::tr(&lang, \"отменить\", \"cancel\")}" }
                 }
-                m3e-button {
-                    variant: "filled",
+                button {
+                    class: "btn btn-primary btn-sm gap-1",
                     disabled: !valid,
                     onclick: move |_| {
                         on_submit.call(ContestPostRequest {
@@ -194,7 +184,7 @@ fn post_edit_form(
                             title_en: title_en(), text_en: text_en(),
                         });
                     },
-                    {icon_slot(if valid { Icon::Pencil } else { Icon::CircleBackslash }, 16)}
+                    {icon_element(if valid { Icon::Pencil } else { Icon::CircleBackslash }, 16)}
                     span { "{i18n::tr(&lang, \"изменить\", \"edit\")}" }
                 }
             }

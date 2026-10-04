@@ -1,118 +1,47 @@
-use chrono::{DateTime, Local, NaiveDate, NaiveTime, TimeZone, Utc};
+use chrono::{DateTime, Local, NaiveDate, NaiveTime, Utc};
 use dioxus::prelude::*;
 
-use super::icon::{Icon, icon_slot};
-
-const DATE_ID: &str = "aj-start-date";
-const TIME_ID: &str = "aj-start-time";
-
-/// Читаем свойство элемента по id: у `change` в M3E нет `detail`,
-/// значение лежит в свойстве `date` самого пикера.
-fn read_date_prop(id: &str) -> Option<DateTime<Utc>> {
-    let document = web_sys::window()?.document()?;
-    let el = document.get_element_by_id(id)?;
-    let v = js_sys::Reflect::get(&el, &wasm_bindgen::JsValue::from_str("date")).ok()?;
-    let v = wasm_bindgen::JsCast::dyn_into::<js_sys::Date>(v).ok()?;
-    if v.get_time().is_nan() {
-        return None;
-    }
-    DateTime::<Utc>::from_timestamp_millis(v.get_time() as i64)
-}
-
-/// Дата+время в локальной зоне через пикеры M3E (mirrors `AJDateTimeInput`).
-///
-/// Пикеры идут **перед** кнопками-переключателями: `*-toggle` резолвит цель
-/// по атрибуту `for` один раз и асинхронно, как и `m3e-menu-trigger`.
-/// Если цель не смонтирована в этот момент — control остаётся null навсегда,
-/// и переключатель молча не работает.
+/// Mirrors aj-app's `AJDateTimeInput` (local date + time → UTC).
 pub fn datetime_input(value: DateTime<Utc>, onchange: EventHandler<DateTime<Utc>>) -> Element {
-    let lang = crate::state::language();
     let local = value.with_timezone(&Local);
+    let mut date = use_signal(|| local.date_naive().to_string());
+    let mut time = use_signal(|| local.time().format("%H:%M").to_string());
 
-    let date_label = crate::i18n::tr(&lang, "дата начала", "start date");
-    let ok = crate::i18n::tr(&lang, "ок", "OK");
-    let cancel = crate::i18n::tr(&lang, "отмена", "cancel");
-    let select_time = crate::i18n::tr(&lang, "выберите время", "select time");
-    let hour = crate::i18n::tr(&lang, "часы", "hour");
-    let minute = crate::i18n::tr(&lang, "минуты", "minute");
-    let toggle_input = crate::i18n::tr(&lang, "ввести вручную", "toggle input picker");
-    let am_pm = crate::i18n::tr(&lang, "AM или PM", "AM or PM");
-
-    let mut date = use_signal(|| local.format("%d.%m.%Y").to_string());
-    let mut time = use_signal(|| local.format("%H:%M").to_string());
-
-    // Любое изменение любой части пересобирает локальное время в UTC.
-    let emit = move |d: &str, t: &str| {
-        let (Ok(day), Ok(tm)) = (
-            NaiveDate::parse_from_str(d, "%d.%m.%Y"),
-            NaiveTime::parse_from_str(t, "%H:%M"),
-        ) else {
+    let apply = move |_| {
+        let Ok(day) = NaiveDate::parse_from_str(&date(), "%Y-%m-%d") else {
             return;
         };
-        let naive = day.and_time(tm);
-        let utc = Local
-            .from_local_datetime(&naive)
+        let Ok(tm) = NaiveTime::parse_from_str(&time(), "%H:%M") else {
+            return;
+        };
+        let utc = day
+            .and_time(tm)
+            .and_local_timezone(Local)
             .earliest()
             .map(|dt| dt.with_timezone(&Utc))
-            .unwrap_or_else(|| DateTime::<Utc>::from_naive_utc_and_offset(naive, Utc));
+            .unwrap_or_else(|| DateTime::<Utc>::from_naive_utc_and_offset(day.and_time(tm), Utc));
         onchange.call(utc);
     };
 
     rsx! {
-        div { class: "flex flex-wrap items-center gap-2",
-            m3e-datepicker {
-                class: "my-1 mr-2",
-                id: DATE_ID,
-                variant: "auto",
-                label: "{date_label}",
-                confirm_label: "{ok}",
-                dismiss_label: "{cancel}",
-                onchange: move |_| {
-                    if let Some(d) = read_date_prop(DATE_ID) {
-                        date.set(d.with_timezone(&Local).format("%d.%m.%Y").to_string());
-                    }
-                    emit(&date(), &time());
+        div { class: "flex gap-2 items-center",
+            input {
+                class: "input input-bordered input-sm w-40",
+                r#type: "date",
+                value: date(),
+                oninput: move |ev| {
+                    date.set(ev.value().clone());
+                    apply(());
                 },
             }
-            m3e-button {
-                variant: "outlined",
-                m3e-datepicker-toggle { "for": DATE_ID,
-                    span { class: "flex items-center gap-1",
-                        {icon_slot(Icon::Gear, 16)}
-                        "{date()}"
-                    }
-                }
-            }
-
-            m3e-timepicker {
-                class: "my-1 mr-2",
-                id: TIME_ID,
-                variant: "auto",
-                mode: "dial",
-                format: "24",
-                hide_mode_toggle: true,
-                confirm_label: "{ok}",
-                dismiss_label: "{cancel}",
-                dial_label: "{select_time}",
-                hour_label: "{hour}",
-                minute_label: "{minute}",
-                mode_toggle_label: "{toggle_input}",
-                period_toggle_label: "{am_pm}",
-                onchange: move |_| {
-                    if let Some(t) = read_date_prop(TIME_ID) {
-                        time.set(t.with_timezone(&Local).format("%H:%M").to_string());
-                    }
-                    emit(&date(), &time());
+            input {
+                class: "input input-bordered input-sm w-28",
+                r#type: "time",
+                value: time(),
+                oninput: move |ev| {
+                    time.set(ev.value().clone());
+                    apply(());
                 },
-            }
-            m3e-button {
-                variant: "outlined",
-                m3e-timepicker-toggle { "for": TIME_ID,
-                    span { class: "flex items-center gap-1",
-                        {icon_slot(Icon::Update, 16)}
-                        "{time()}"
-                    }
-                }
             }
         }
     }

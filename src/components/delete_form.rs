@@ -1,7 +1,7 @@
 use dioxus::prelude::*;
 
 use super::{
-    icon::{Icon, icon_slot},
+    icon::{Icon, icon_element},
     password_field::PasswordField,
 };
 
@@ -23,47 +23,46 @@ pub fn DeleteForm(
                 div { class: "flex flex-col gap-3",
                     div { class: "flex items-center justify-between gap-4",
                         p { class: "card-title", "{crate::i18n::tr(&crate::state::language(), \"Требуется рут-доступ\", \"Root access required\")}" }
-                        m3e-icon-button {
+                        button {
+                            class: "btn btn-sm btn-circle btn-ghost",
                             onclick: move |ev| on_cancel.call(ev),
                             "✕"
                         }
                     }
-                    m3e-form-field {
-                        input {
-                            placeholder: crate::i18n::tr(&crate::state::language(), "логин", "login"),
-                            value: login(),
-                            oninput: move |ev| login.set(ev.value()),
-                        }
+                    input {
+                        class: "input input-bordered",
+                        placeholder: crate::i18n::tr(&crate::state::language(), "логин", "login"),
+                        value: login(),
+                        oninput: move |ev| login.set(ev.value()),
                     }
                     PasswordField {
                         value: password,
-                        label: crate::i18n::tr(&crate::state::language(), "пароль", "password"),
-                        placeholder: crate::i18n::tr(&crate::state::language(), "не меньше 8 символов", "at least 8 characters"),
-                        class: "w-full".to_string(),
+                        placeholder: crate::i18n::tr(&crate::state::language(), "пароль", "password"),
+                        class: "input input-bordered".to_string(),
                     }
                     label { class: "label cursor-pointer justify-start gap-2",
-                        m3e-switch {
-                            class: "text-error",
+                        input {
+                            r#type: "checkbox",
+                            class: "checkbox checkbox-error checkbox-sm",
                             checked: confirmed(),
-                            onchange: move |_| confirmed.set(!confirmed()),
+                            onchange: move |ev| confirmed.set(ev.checked()),
                         }
                         span { class: "label-text", "{crate::i18n::tr(&crate::state::language(), \"подтвердите удаление\", \"confirm deletion\")}" }
                     }
                     div { class: "card-actions justify-end mt-2",
-                        m3e-button {
-                            variant: "text",
+                        button {
+                            class: "btn btn-ghost btn-sm",
                             onclick: move |ev| on_cancel.call(ev),
                             span { "{crate::i18n::tr(&crate::state::language(), \"отменить\", \"cancel\")}" }
                         }
-                        m3e-button {
-                            class: "error",
-                            variant: "filled",
+                        button {
+                            class: "btn btn-error btn-sm gap-2",
                             disabled: !(!login().is_empty() && !password().is_empty() && confirmed()),
                             onclick: {
                                 let on_delete = on_delete;
                                 move |_| on_delete.call((login(), password(), confirmed()))
                             },
-                            {icon_slot(if confirmed() { Icon::Trash } else { Icon::CircleBackslash }, 16)}
+                            {icon_element(if confirmed() { Icon::Trash } else { Icon::CircleBackslash }, 16)}
                             span { "{crate::i18n::tr(&crate::state::language(), \"удалить\", \"delete\")}" }
                         }
                     }

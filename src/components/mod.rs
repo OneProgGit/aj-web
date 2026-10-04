@@ -15,7 +15,6 @@ pub mod password_field;
 pub mod post_card;
 pub mod problem_card;
 pub mod question_card;
-pub mod select;
 pub mod submissions;
 pub mod user_card;
 pub mod user_link;

@@ -3,9 +3,7 @@ use dioxus_web::WebEventExt;
 use wasm_bindgen::JsCast;
 
 use crate::{
-    api,
-    components::icon::icon_slot,
-    i18n,
+    api, i18n,
     models::{
         DeletionRequest,
         problems::{ProblemType, PublicProblemConfig, Subgroup, SubgroupType},
@@ -13,7 +11,10 @@ use crate::{
     state::STATE,
 };
 
-use super::{delete_form::DeleteForm, icon::Icon};
+use super::{
+    delete_form::DeleteForm,
+    icon::{Icon, icon_element},
+};
 
 /// Subgroup mini-card inside a problem card (mirrors `AJSubgroupCard`).
 #[derive(Props, Clone)]
@@ -126,10 +127,10 @@ pub fn ProblemCard(props: ProblemCardProps) -> Element {
                         }
                     }
                     if can_manage {
-                        m3e-button {
-                            variant: "text",
+                        button {
+                            class: "btn btn-ghost btn-sm gap-1",
                             onclick: move |_| admin_open.set(!admin_open()),
-                            {icon_slot(Icon::Gear, 14)}
+                            {icon_element(Icon::Gear, 14)}
                             span { "{i18n::tr(&lang, \"админ.\", \"admin\")}" }
                         }
                     }
@@ -166,15 +167,14 @@ pub fn ProblemCard(props: ProblemCardProps) -> Element {
                         div { class: "modal-box max-w-2xl flex flex-col gap-3",
                             div { class: "flex justify-between items-center",
                                 span { class: "text-lg font-bold", "{i18n::tr(&lang, \"Управление задачей\", \"Problem management\")}" }
-                                m3e-icon-button {
+                                button {
+                                    class: "btn btn-sm btn-circle btn-ghost",
                                     onclick: move |_| { picked_archive.set(None); admin_open.set(false); },
                                     "✕"
                                 }
                             }
-                            label { class: "cursor-pointer",
-                                m3e-button {
-                                    variant: "outlined",
-                                {icon_slot(Icon::Upload, 16)}
+                            label { class: "btn btn-block btn-outline btn-sm gap-1",
+                            {icon_element(Icon::Upload, 16)}
                             span {
                                 {if let Some((name, _)) = picked_archive() {
                                     format!("{} ({})", i18n::tr(&lang, "выбрать архив", "pick archive"), name)
@@ -214,15 +214,14 @@ pub fn ProblemCard(props: ProblemCardProps) -> Element {
                                 },
                             }
                         }
-                            }
                         div { class: "card-actions justify-end mt-2",
-                            m3e-button {
-                                variant: "text",
+                            button {
+                                class: "btn btn-ghost btn-sm gap-1",
                                 onclick: move |_| { picked_archive.set(None); admin_open.set(false); },
                                 span { "{i18n::tr(&lang, \"отменить\", \"cancel\")}" }
                             }
-                            m3e-button {
-                                variant: "tonal",
+                            button {
+                                class: "btn btn-accent btn-sm gap-1",
                                 onclick: {
                                     let token = STATE.read().token.clone();
                                     let pid = problem.id;
@@ -235,19 +234,17 @@ pub fn ProblemCard(props: ProblemCardProps) -> Element {
                                         });
                                     }
                                 },
-                                {icon_slot(Icon::Download, 16)}
+                                {icon_element(Icon::Download, 16)}
                                 span { "{i18n::tr(&lang, \"скачать\", \"download\")}" }
                             }
-                            m3e-button {
-                                variant: "filled",
-                                class: "error",
+                            button {
+                                class: "btn btn-error btn-sm gap-1",
                                 onclick: move |_| deleting.set(!deleting()),
-                                {icon_slot(Icon::Trash, 16)}
+                                {icon_element(Icon::Trash, 16)}
                                 span { "{i18n::tr(&lang, \"удалить\", \"delete\")}" }
                             }
-                            m3e-button {
-                                variant: "filled",
-                                class: "error",
+                            button {
+                            class: "btn btn-primary btn-sm gap-1",
                             disabled: picked_archive().is_none(),
                             onclick: {
                                 let archive = picked_archive().map(|(_, b)| b);
@@ -269,7 +266,7 @@ pub fn ProblemCard(props: ProblemCardProps) -> Element {
                                     }
                                 }
                             },
-                            {icon_slot(Icon::Pencil, 16)}
+                            {icon_element(Icon::Pencil, 16)}
                             span { "{i18n::tr(&lang, \"изменить\", \"edit\")}" }
                             }
                         }

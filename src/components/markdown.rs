@@ -1,7 +1,7 @@
 use dioxus::prelude::*;
 use pulldown_cmark::{Options, Parser};
 
-use super::icon::{Icon, icon_slot};
+use super::icon::{Icon, icon_element};
 use crate::i18n;
 
 fn render_markdown(text: &str) -> String {
@@ -100,11 +100,9 @@ pub fn Markdown(text: String) -> Element {
                     if (block.querySelector('.md-copy-btn')) return;
                     const head = block.querySelector('.md-codehead');
                     if (!head) return;
-                    // Кнопка в стиле M3 (text-вариант), а не «голый» <button>.
-                    const btn = document.createElement('m3e-button');
-                    btn.setAttribute('variant', 'text');
-                    btn.className = 'md-copy-btn';
+                    const btn = document.createElement('button');
                     btn.textContent = '{copy_label}';
+                    btn.className = 'md-copy-btn';
                     btn.onclick = () => {{
                         const code = block.querySelector('code');
                         if (code) navigator.clipboard.writeText(code.innerText);
@@ -134,10 +132,10 @@ pub fn MdField(value: Signal<String>, label: String) -> Element {
     rsx! {
         div { class: "flex items-center justify-between gap-2",
             span { class: "label-text", "{label}" }
-            m3e-button {
-                variant: "text",
+            button {
+                class: "btn btn-ghost btn-sm gap-1",
                 onclick: move |_| preview.set(!preview()),
-                {icon_slot(Icon::Reader, 14)}
+                {icon_element(Icon::Reader, 14)}
                 span { "{toggle_label}" }
             }
         }
@@ -146,13 +144,10 @@ pub fn MdField(value: Signal<String>, label: String) -> Element {
                 Markdown { text: value() }
             }
         } else {
-            m3e-form-field {
-                span { slot: "label", "{label}" }
-                textarea {
-                    class: "w-full font-mono min-h-24",
-                    value: value(),
-                    oninput: move |ev| value.set(ev.value()),
-                }
+            textarea {
+                class: "textarea textarea-bordered w-full",
+                value: value(),
+                oninput: move |ev| value.set(ev.value()),
             }
         }
     }

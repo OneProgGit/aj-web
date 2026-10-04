@@ -4,7 +4,7 @@ use crate::{
     alerts::{AlertKind, show_alert},
     api,
     components::{
-        icon::{Icon, icon_slot},
+        icon::{Icon, icon_element},
         leaderboard::Leaderboard,
         loading::Loading,
     },
@@ -17,27 +17,6 @@ pub fn ContestLeaderboard(contest_id: i64) -> Element {
     let lang = crate::state::language();
     let mut started_for = use_signal(|| None::<i64>);
     let mut loaded = use_signal(|| false);
-
-    // Временная диагностика привязки m3e-menu-trigger: он резолвит меню по
-    // атрибуту `for` ровно один раз и асинхронно (миксин HtmlFor в
-    // @m3e/web/core), повторной попытки нет. Лог одной строкой: dev-сервер
-    // не умеет парсить console.* с несколькими аргументами.
-    use_effect(|| {
-        spawn(async move {
-            gloo_timers::future::TimeoutFuture::new(800).await;
-            let _ = js_sys::eval(
-                r#"(async () => {
-                    const trig = document.querySelector('m3e-menu-trigger');
-                    if (!trig) { console.log('[m3e] триггер не найден в DOM'); return; }
-                    const forId = trig.getAttribute('for');
-                    const menu = forId ? document.getElementById(forId) : null;
-                    console.log('[m3e] for=' + forId + ' | menu=' + (menu ? menu.tagName : 'нет')
-                        + ' | control=' + (trig.control ? trig.control.tagName : 'null')
-                        + ' | привязан=' + (trig.menu ? 'да' : 'нет'));
-                })()"#,
-            );
-        });
-    });
 
     if started_for() != Some(contest_id) {
         started_for.set(Some(contest_id));
@@ -171,41 +150,38 @@ pub fn ContestLeaderboard(contest_id: i64) -> Element {
             div { class: "flex flex-wrap gap-4 items-center",
                 h1 { class: "text-2xl font-bold", "{i18n::tr(&lang, \"Таблица лидеров\", \"Leaderboard\")}" }
                 if can_manage {
-                    // Порядок важен: m3e-menu-trigger резолвит цель по
-                    // атрибуту for ровно один раз — в update(), когда
-                    // htmlFor меняется. Резолв асинхронный, и если меню
-                    // ещё не смонтировано, control остаётся null навсегда
-                    // (повторного резолва нет) — клик молча ничего не делает.
-                    // Поэтому сначала меню, потом кнопка-триггер.
-                    m3e-menu { id: "export-menu",
-                        m3e-menu-item {
-                            onclick: {
-                                let export = export.clone();
-                                move |_| export("csv")
-                            },
-                            "CSV"
+                    details { class: "dropdown",
+                        summary { class: "btn btn-ghost btn-sm gap-1",
+                            {icon_element(Icon::Download, 14)}
+                            span { "{i18n::tr(&lang, \"экспортировать\", \"export\")}" }
                         }
-                        m3e-menu-item {
-                            onclick: {
-                                let export = export.clone();
-                                move |_| export("md")
-                            },
-                            "MD"
-                        }
-                        m3e-menu-item {
-                            onclick: {
-                                let export = export.clone();
-                                move |_| export("html")
-                            },
-                            "HTML"
-                        }
-                    }
-                    m3e-button {
-                        variant: "tonal",
-                        m3e-menu-trigger { "for": "export-menu",
-                            span { class: "flex items-center gap-1",
-                                {icon_slot(Icon::Download, 16)}
-                                "{i18n::tr(&lang, \"экспортировать\", \"export\")}"
+                        ul { class: "menu dropdown-content bg-base-200 rounded-box p-2 shadow",
+                            li {
+                                button {
+                                    onclick: {
+                                        let export = export.clone();
+                                        move |_| export("csv")
+                                    },
+                                    "CSV"
+                                }
+                            }
+                            li {
+                                button {
+                                    onclick: {
+                                        let export = export.clone();
+                                        move |_| export("md")
+                                    },
+                                    "MD"
+                                }
+                            }
+                            li {
+                                button {
+                                    onclick: {
+                                        let export = export.clone();
+                                        move |_| export("html")
+                                    },
+                                    "HTML"
+                                }
                             }
                         }
                     }

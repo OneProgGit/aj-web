@@ -127,14 +127,7 @@ pub fn ContestCard(props: ContestCardProps) -> Element {
                     h2 { class: "card-title text-lg",
                         span { "#{contest.id} {name}" }
                     }
-                    span { class: "text-sm italic",
-                        match status {
-                            ContestStatus::BeforeStart => i18n::tr(&lang, "не начался", "has not started"),
-                            ContestStatus::Ongoing => i18n::tr(&lang, "идёт", "ongoing"),
-                            ContestStatus::Finished => i18n::tr(&lang, "завершён", "finished"),
-                            ContestStatus::Upsolving => i18n::tr(&lang, "дорешка", "upsolving"),
-                        }
-                    }
+                    span { class: "text-sm italic", "{status.label(&lang)}" }
                 }
 
                 if has_url {

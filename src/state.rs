@@ -34,41 +34,19 @@ pub fn contest_status(contest: &PublicContestConfig) -> ContestStatus {
     }
 }
 
-/// Порядок контестов в списке: сперва идущие, остальные — по близости к
-/// текущему моменту.
-///
-/// Ключ — расстояние от «сейчас» до ближайшей границы контеста, чем меньше,
-/// тем выше в списке:
-///
-/// - идущие — до финиша (скоро заканчивающиеся выше);
-/// - ещё не начавшиеся — до старта (ближайшие выше);
-/// - завершившиеся — до финиша в прошлом (только что закончившиеся выше).
-///
-/// Поэтому «завтра начинается» и «только что закончился» встают рядом и
-/// чередуются по удалённости от текущего момента, а не громоздятся в
-/// отдельные кучи. Идущие при этом всегда первыми, независимо от того,
-/// насколько близко начало следующего контеста.
-///
-/// По id сортируем последним ключом: при равных временах порядок не должен
-/// прыгать между перерисовками.
-#[must_use]
-pub fn sort_contests_for_list(list: &[PublicContestConfig]) -> Vec<PublicContestConfig> {
-    let now = chrono::Utc::now();
-    let key = |c: &PublicContestConfig| match contest_status(c) {
-        // Идущие всегда в начале — это то, за чем следят прямо сейчас.
-        ContestStatus::Ongoing => (0u8, (c.finishes_at - now).num_milliseconds().max(0)),
-        // Дальше всё остальное — по близости к текущему моменту.
-        ContestStatus::BeforeStart => (1u8, (c.starts_at - now).num_milliseconds().max(0)),
-        ContestStatus::Upsolving | ContestStatus::Finished => {
-            (1u8, (now - c.finishes_at).num_milliseconds().max(0))
-        }
-    };
-    let mut out = list.to_vec();
-    out.sort_by(|a, b| key(a).cmp(&key(b)).then_with(|| b.id.cmp(&a.id)));
-    out
-}
-
 impl ContestStatus {
+    /// Подпись статуса для фильтров и карточки — одна и та же строка,
+    /// иначе фильтр «идут» и надпись «идёт» разъедутся.
+    #[must_use]
+    pub fn label(self, lang: &str) -> String {
+        match self {
+            Self::BeforeStart => crate::i18n::tr(lang, "не начался", "has not started"),
+            Self::Ongoing => crate::i18n::tr(lang, "идёт", "ongoing"),
+            Self::Finished => crate::i18n::tr(lang, "завершён", "finished"),
+            Self::Upsolving => crate::i18n::tr(lang, "дорешка", "upsolving"),
+        }
+    }
+
     #[must_use]
     pub const fn css_bg(&self) -> &'static str {
         match self {

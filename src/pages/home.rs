@@ -9,7 +9,7 @@ use crate::{
     },
     i18n,
     models::contests::ContestRequest,
-    state::STATE,
+    state::{ContestStatus, STATE, contest_status},
 };
 
 /// Loads account/contest/problem/user data, mirroring aj-app's `load_all`.
@@ -62,6 +62,8 @@ pub fn Home() -> Element {
     // started — запрос пошёл (ровно один раз), loading — он ещё идёт.
     let mut started = use_signal(|| false);
     let mut loading = use_signal(|| false);
+    // Фильтр по статусу: None — показывать все, как отдаёт сервер.
+    let status_filter = use_signal(|| None::<ContestStatus>);
 
     if !started() {
         started.set(true);
@@ -73,6 +75,18 @@ pub fn Home() -> Element {
         });
     }
 
+    // Статус считаем здесь, один раз на контест: карточка сама пересчитает
+    // его на каждом тике, а список перерисовывается вместе с ней.
+    let visible_contests: Vec<_> = STATE
+        .read()
+        .contests
+        .iter()
+        .filter(|c| match status_filter() {
+            Some(want) => contest_status(c) == want,
+            None => true,
+        })
+        .cloned()
+        .collect();
     rsx! {
         div { class: "flex flex-col items-start gap-4 max-w-7xl mx-auto w-full",
             div { class: "flex gap-4 items-center",
@@ -128,8 +142,45 @@ pub fn Home() -> Element {
             } else if STATE.read().contests.is_empty() {
                 p { class: "italic", "{i18n::tr(&lang, \"Контестов пока что нет\", \"No contests yet\")}" }
             } else {
+                div { class: "flex flex-wrap items-center gap-2",
+                    // Порядок серверный (id desc) — сортировки нет, только фильтр.
+                    for option in [
+                        None,
+                        Some(ContestStatus::Ongoing),
+                        Some(ContestStatus::BeforeStart),
+                        Some(ContestStatus::Upsolving),
+                        Some(ContestStatus::Finished),
+                    ] {
+                        {
+                            let mut filter = status_filter;
+                            let active = status_filter() == option;
+                            let title = match option {
+                                None => i18n::tr(&lang, "все", "all"),
+                                Some(st) => st.label(&lang),
+                            };
+                            rsx! {
+                                button {
+                                    class: if active {
+                                        "btn btn-sm btn-primary"
+                                    } else {
+                                        "btn btn-sm btn-ghost"
+                                    },
+                                    onclick: move |_| filter.set(option),
+                                    "{title}"
+                                }
+                            }
+                        }
+                    }
+                }
                 div { class: "flex flex-col gap-4 w-full max-h-[28rem] overflow-y-auto",
-                    for contest in crate::state::sort_contests_for_list(&STATE.read().contests).iter() {
+                    // Сюда попадаем только когда сам список непуст, так что
+                    // пустой результат — это именно следствие фильтра.
+                    if visible_contests.is_empty() {
+                        p { class: "italic",
+                            "{i18n::tr(&lang, \"По этому фильтру ничего нет\", \"Nothing matches this filter\")}"
+                        }
+                    }
+                    for contest in visible_contests.iter() {
                         ContestCard {
                             contest: contest.clone(),
                             show_enter: true,

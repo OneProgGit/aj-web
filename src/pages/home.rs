@@ -129,7 +129,7 @@ pub fn Home() -> Element {
                 p { class: "italic", "{i18n::tr(&lang, \"Контестов пока что нет\", \"No contests yet\")}" }
             } else {
                 div { class: "flex flex-col gap-4 w-full max-h-[28rem] overflow-y-auto",
-                    for contest in STATE.read().contests.iter() {
+                    for contest in crate::state::sort_contests_for_list(&STATE.read().contests).iter() {
                         ContestCard {
                             contest: contest.clone(),
                             show_enter: true,

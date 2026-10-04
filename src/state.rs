@@ -34,6 +34,39 @@ pub fn contest_status(contest: &PublicContestConfig) -> ContestStatus {
     }
 }
 
+/// Порядок контестов в списке: сперва идущие, следом те, кто только что
+/// закончился или вот-вот закончится, и в конце — ещё не начавшиеся.
+///
+/// Внутри групп направление разное, поэтому ключ собираем явно:
+/// - идущие — по возрастанию финиша, то есть скоро заканчивающиеся выше;
+/// - завершившиеся — по убыванию финиша, то есть только что закончившиеся выше;
+/// - будущие — по возрастанию старта, то есть ближайшие выше.
+///
+/// По id сортируем только как последний ключ: при равных временах порядок
+/// не должен прыгать между перерисовками.
+#[must_use]
+pub fn sort_contests_for_list(list: &[PublicContestConfig]) -> Vec<PublicContestConfig> {
+    let mut keyed: Vec<(u8, std::cmp::Reverse<i64>, PublicContestConfig)> = list
+        .iter()
+        .map(|c| {
+            let key = match contest_status(c) {
+                ContestStatus::Ongoing => (0, std::cmp::Reverse(c.finishes_at.timestamp_millis())),
+                ContestStatus::Upsolving | ContestStatus::Finished => {
+                    (1, std::cmp::Reverse(-c.finishes_at.timestamp_millis()))
+                }
+                ContestStatus::BeforeStart => {
+                    (2, std::cmp::Reverse(c.starts_at.timestamp_millis()))
+                }
+            };
+            (key.0, key.1, c.clone())
+        })
+        .collect();
+    keyed.sort_by(|a, b| {
+        (a.0, a.1, std::cmp::Reverse(b.2.id)).cmp(&(b.0, b.1, std::cmp::Reverse(a.2.id)))
+    });
+    keyed.into_iter().map(|(_, _, c)| c).collect()
+}
+
 impl ContestStatus {
     #[must_use]
     pub const fn css_bg(&self) -> &'static str {

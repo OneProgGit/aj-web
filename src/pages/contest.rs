@@ -82,7 +82,7 @@ fn problem_selector(
                         };
                         match res {
                             Ok(subs) => STATE.write().submissions = subs,
-                            Err(e) => show_alert(AlertKind::Error, e),
+                            Err(e) => crate::state::show_error(e),
                         }
                     }
                 });
@@ -148,7 +148,7 @@ async fn load_contest_state(
     if force_data {
         match api::problems::get_contest_problems(contest_id, &token).await {
             Ok(list) => STATE.write().contest_problems = list,
-            Err(e) => show_alert(AlertKind::Error, e),
+            Err(e) => crate::state::show_error(e),
         }
     }
 
@@ -161,18 +161,18 @@ async fn load_contest_state(
         };
         match res {
             Ok(subs) => STATE.write().submissions = subs,
-            Err(e) => show_alert(AlertKind::Error, e),
+            Err(e) => crate::state::show_error(e),
         }
     }
 
     if force_data {
         match api::contests::get_contest_leaderboard(contest_id, &token).await {
             Ok(rows) => STATE.write().leaderboard = rows,
-            Err(e) => show_alert(AlertKind::Error, e),
+            Err(e) => crate::state::show_error(e),
         }
         match api::contests::get_contest_posts(contest_id, &token).await {
             Ok(posts) => STATE.write().posts = posts,
-            Err(e) => show_alert(AlertKind::Error, e),
+            Err(e) => crate::state::show_error(e),
         }
         match api::contests::get_contest(contest_id, &token).await {
             Ok(contest) => {
@@ -183,7 +183,7 @@ async fn load_contest_state(
                     state.contests.push(contest);
                 }
             }
-            Err(e) => show_alert(AlertKind::Error, e),
+            Err(e) => crate::state::show_error(e),
         }
         let can_manage = {
             let state = STATE.read();
@@ -199,7 +199,7 @@ async fn load_contest_state(
         };
         match questions {
             Ok(questions) => STATE.write().questions = questions,
-            Err(e) => show_alert(AlertKind::Error, e),
+            Err(e) => crate::state::show_error(e),
         }
     }
 }
@@ -505,7 +505,7 @@ pub fn Contest(contest_id: i64) -> Element {
                                                 state.contests.push(fresh);
                                             }
                                         }
-                                        Err(e) => show_alert(AlertKind::Error, e),
+                                        Err(e) => crate::state::show_error(e),
                                     }
                                 });
                             },

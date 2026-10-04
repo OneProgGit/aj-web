@@ -113,7 +113,7 @@ pub fn Submissions(props: SubmissionsProps) -> Element {
                                 label { class: "label cursor-pointer justify-start gap-2",
                                     input {
                                         r#type: "checkbox",
-                                        class: "checkbox checkbox-sm",
+                                        class: "toggle toggle-sm",
                                         checked: STATE.read().all_submissions,
                                         onchange: move |ev| {
                                             let checked = ev.checked();

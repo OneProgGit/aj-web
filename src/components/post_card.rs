@@ -98,7 +98,7 @@ pub fn PostCard(props: PostCardProps) -> Element {
                                         "✕"
                                     }
                                 }
-                                {post_edit_form(post.clone(), Callback::new(move |request| {
+                                {post_edit_form(post.clone(), None, Callback::new(move |request| {
                                     let token = STATE.read().token.clone();
                                     let id = post.id;
                                     spawn(async move {
@@ -142,6 +142,7 @@ pub fn PostCard(props: PostCardProps) -> Element {
 
 fn post_edit_form(
     post: ContestPost,
+    initial_lang: Option<bool>,
     on_submit: EventHandler<ContestPostRequest>,
     on_cancel: Callback<MouseEvent>,
 ) -> Element {
@@ -153,21 +154,52 @@ fn post_edit_form(
     let valid = (!title_ru().is_empty() && !text_ru().is_empty())
         || (!title_en().is_empty() && !text_en().is_empty());
 
+    // Язык редактируемых полей: 0 = русский, 1 = английский. По умолчанию —
+    // язык интерфейса, но если у объявления на нём пусто, открываем тот,
+    // где текст есть, иначе вкладка выглядела бы пустой.
+    let mut lang_idx = use_signal(|| match initial_lang {
+        Some(en) => u8::from(en),
+        None => {
+            let en = lang == "en";
+            let (primary, secondary) = if en {
+                (&post.title_en, &post.title_ru)
+            } else {
+                (&post.title_ru, &post.title_en)
+            };
+            u8::from(primary.trim().is_empty() && !secondary.trim().is_empty())
+        }
+    });
+
     rsx! {
         div { class: "flex flex-col gap-3",
-            span { class: "label-text", "{i18n::tr(&lang, \"название (рус.)\", \"title (ru)\")}" }
-            input { class: "input input-bordered",
-                value: title_ru(), oninput: move |ev| title_ru.set(ev.value()) }
-            MdField {
-                value: text_ru,
-                label: i18n::tr(&lang, "текст (рус.)", "text (ru)"),
+            div { class: "tabs tabs-box tabs-sm w-fit",
+                button {
+                    class: if lang_idx() == 0 { "tab tab-active" } else { "tab" },
+                    onclick: move |_| lang_idx.set(0),
+                    "русский"
+                }
+                button {
+                    class: if lang_idx() == 1 { "tab tab-active" } else { "tab" },
+                    onclick: move |_| lang_idx.set(1),
+                    "английский"
+                }
             }
-            span { class: "label-text", "{i18n::tr(&lang, \"название (англ.)\", \"title (en)\")}" }
-            input { class: "input input-bordered",
-                value: title_en(), oninput: move |ev| title_en.set(ev.value()) }
-            MdField {
-                value: text_en,
-                label: i18n::tr(&lang, "текст (англ.)", "text (en)"),
+            if lang_idx() == 0 {
+                span { class: "label-text", "{i18n::tr(&lang, \"название (рус.)\", \"title (ru)\")}" }
+                input { class: "input input-bordered",
+                    value: title_ru(), oninput: move |ev| title_ru.set(ev.value()) }
+                MdField {
+                    value: text_ru,
+                    label: i18n::tr(&lang, "текст (рус.)", "text (ru)"),
+                }
+            } else {
+                span { class: "label-text", "{i18n::tr(&lang, \"название (англ.)\", \"title (en)\")}" }
+                input { class: "input input-bordered",
+                    value: title_en(), oninput: move |ev| title_en.set(ev.value()) }
+                MdField {
+                    value: text_en,
+                    label: i18n::tr(&lang, "текст (англ.)", "text (en)"),
+                }
             }
             div { class: "card-actions justify-end",
                 button {

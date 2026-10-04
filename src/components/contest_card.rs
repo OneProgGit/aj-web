@@ -52,13 +52,6 @@ fn format_remaining(lang: &str, left: chrono::Duration) -> String {
     }
 }
 
-fn yes_no(lang: &str, value: bool) -> String {
-    if value {
-        i18n::tr(lang, "да", "yes")
-    } else {
-        i18n::tr(lang, "нет", "no")
-    }
-}
 /// whether the «войти» button is rendered (contest page sets it to false).
 #[derive(Props, Clone)]
 /// Contest card. Mirrors `AJContestCard` from aj-app. `show_enter` controls
@@ -308,18 +301,44 @@ pub fn ContestCard(props: ContestCardProps) -> Element {
                                     "✕"
                                 }
                             }
+                            // Порядок и оформление — как в форме контеста:
+                            // тумблеры, только отключённые (инфо читаемое).
                             div { class: "flex flex-col gap-3 mt-4",
-                                div { class: "flex items-center justify-between gap-4",
-                                    span { class: "text-sm", "{i18n::tr(&lang, \"дорешка\", \"upsolving\")}" }
-                                    span { class: "text-sm italic font-semibold text-right", "{yes_no(&lang, contest.upsolving_enabled)}" }
+                                div { class: "flex items-center gap-3",
+                                    input {
+                                        class: "toggle toggle-sm",
+                                        r#type: "checkbox",
+                                        disabled: true,
+                                        checked: contest.hidden,
+                                    }
+                                    span { "{i18n::tr(&lang, \"скрыть\", \"hidden\")}" }
                                 }
-                                div { class: "flex items-center justify-between gap-4",
-                                    span { class: "text-sm", "{i18n::tr(&lang, \"решения скрыты\", \"solutions hidden\")}" }
-                                    span { class: "text-sm italic font-semibold text-right", "{yes_no(&lang, contest.solutions_hidden)}" }
+                                div { class: "flex items-center gap-3",
+                                    input {
+                                        class: "toggle toggle-sm",
+                                        r#type: "checkbox",
+                                        disabled: true,
+                                        checked: contest.solutions_hidden,
+                                    }
+                                    span { "{i18n::tr(&lang, \"скрыть решения\", \"hide solutions\")}" }
                                 }
-                                div { class: "flex items-center justify-between gap-4",
-                                    span { class: "text-sm", "{i18n::tr(&lang, \"таблица скрыта\", \"leaderboard hidden\")}" }
-                                    span { class: "text-sm italic font-semibold text-right", "{yes_no(&lang, contest.leaderboard_hidden)}" }
+                                div { class: "flex items-center gap-3",
+                                    input {
+                                        class: "toggle toggle-sm",
+                                        r#type: "checkbox",
+                                        disabled: true,
+                                        checked: contest.leaderboard_hidden,
+                                    }
+                                    span { "{i18n::tr(&lang, \"скрыть таблицу лидеров\", \"hide leaderboard\")}" }
+                                }
+                                div { class: "flex items-center gap-3",
+                                    input {
+                                        class: "toggle toggle-sm",
+                                        r#type: "checkbox",
+                                        disabled: true,
+                                        checked: contest.upsolving_enabled,
+                                    }
+                                    span { "{i18n::tr(&lang, \"открыть дорешку\", \"open upsolving\")}" }
                                 }
                             }
                         }

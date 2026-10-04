@@ -92,7 +92,7 @@ pub fn Home() -> Element {
                 label { class: "label cursor-pointer justify-start gap-2",
                 input {
                     r#type: "checkbox",
-                    class: "checkbox checkbox-sm",
+                    class: "toggle toggle-sm",
                     checked: STATE.read().contests_is_all,
                     onchange: move |ev| {
                         let new_value = ev.checked();

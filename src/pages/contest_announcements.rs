@@ -21,6 +21,8 @@ pub fn ContestAnnouncements(contest_id: i64) -> Element {
     let text_ru = use_signal(String::new);
     let mut title_en = use_signal(String::new);
     let text_en = use_signal(String::new);
+    // Язык полей в модалке: 0 = русский, 1 = английский
+    let mut lang_idx = use_signal(|| u8::from(lang == "en"));
     let is_owner = STATE.read().is_owner();
     let uid = STATE.read().user.as_ref().map(|u| u.id).unwrap_or_default();
     let contest = STATE
@@ -82,6 +84,19 @@ pub fn ContestAnnouncements(contest_id: i64) -> Element {
                             button { class: "btn btn-sm btn-circle btn-ghost", onclick: move |_| modal_open.set(false), "✕" }
                         }
                         div { class: "flex flex-col gap-3 mt-4",
+                            div { class: "tabs tabs-box tabs-sm w-fit",
+                                button {
+                                    class: if lang_idx() == 0 { "tab tab-active" } else { "tab" },
+                                    onclick: move |_| lang_idx.set(0),
+                                    "русский"
+                                }
+                                button {
+                                    class: if lang_idx() == 1 { "tab tab-active" } else { "tab" },
+                                    onclick: move |_| lang_idx.set(1),
+                                    "английский"
+                                }
+                            }
+                            if lang_idx() == 0 {
                             span { class: "label-text", "{i18n::tr(&lang, \"название (рус.)\", \"title (ru)\")}" }
                             input {
                                 class: "input input-bordered",
@@ -92,6 +107,7 @@ pub fn ContestAnnouncements(contest_id: i64) -> Element {
                                 value: text_ru,
                                 label: i18n::tr(&lang, "текст (рус.)", "text (ru)"),
                             }
+                            } else {
                             span { class: "label-text", "{i18n::tr(&lang, \"название (англ.)\", \"title (en)\")}" }
                             input {
                                 class: "input input-bordered",
@@ -101,6 +117,7 @@ pub fn ContestAnnouncements(contest_id: i64) -> Element {
                             MdField {
                                 value: text_en,
                                 label: i18n::tr(&lang, "текст (англ.)", "text (en)"),
+                            }
                             }
                             div { class: "card-actions justify-end",
                                 button {

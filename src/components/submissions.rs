@@ -123,13 +123,6 @@ pub fn Submissions(props: SubmissionsProps) -> Element {
                                         },
                                     }
                                     span { class: "label-text", "{i18n::tr(&lang, \"все посылки\", \"all submissions\")}" }
-                                    // Список посылок остаётся на месте, поэтому
-                                    // здесь индикатор компактный, а не страничный
-                                    // Loading: перезагрузка быстрая и большой
-                                    // спиннер просто мигает.
-                                    if pending() {
-                                        span { class: "loading loading-spinner loading-xs" }
-                                    }
                                 }
                             }
                             button {
@@ -142,7 +135,13 @@ pub fn Submissions(props: SubmissionsProps) -> Element {
                         }
                     }
 
-                    if submissions.is_empty() {
+                    // Пока идёт перезагрузка (переключатель «все посылки» или
+                    // кнопка «обновить»), на месте таблицы показываем Loading:
+                    // старые посылки при смене режима нерелевантны, и таблица
+                    // с ними только путает.
+                    if pending() {
+                        Loading {}
+                    } else if submissions.is_empty() {
                         p { class: "italic", "{i18n::tr(&lang, \"Посылок пока что нет\", \"No submissions yet\")}" }
                     } else {
                         div { class: "overflow-x-auto overflow-y-auto flex-1 min-h-0 min-w-0 max-h-[32rem]",

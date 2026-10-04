@@ -162,7 +162,7 @@ pub fn ContestLeaderboard(contest_id: i64) -> Element {
                                         let export = export.clone();
                                         move |_| export("csv")
                                     },
-                                    "CSV"
+                                    ".csv"
                                 }
                             }
                             li {
@@ -171,7 +171,7 @@ pub fn ContestLeaderboard(contest_id: i64) -> Element {
                                         let export = export.clone();
                                         move |_| export("md")
                                     },
-                                    "MD"
+                                    ".md"
                                 }
                             }
                             li {
@@ -180,7 +180,7 @@ pub fn ContestLeaderboard(contest_id: i64) -> Element {
                                         let export = export.clone();
                                         move |_| export("html")
                                     },
-                                    "HTML"
+                                    ".html"
                                 }
                             }
                         }

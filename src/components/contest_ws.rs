@@ -1,5 +1,7 @@
 use std::collections::{HashMap, HashSet};
-use std::sync::Mutex;
+use std::sync::{Mutex, OnceLock};
+
+use chrono::Utc;
 
 use dioxus::prelude::*;
 use futures_util::{FutureExt, SinkExt, StreamExt};
@@ -160,6 +162,44 @@ async fn refresh_contests_on_status_change() {
     }
 }
 
+/// Следит за сменой статуса контестов и перечитывает их в момент перехода.
+///
+/// Статус выводится из времени (`contest_status`), то есть меняется ровно в
+/// `starts_at` / `finishes_at`. Карточка в списке обновляет его раз в секунду
+/// по своему таймеру, но payload контеста (условия на старте, разбор на
+/// финише) без GET остаётся старым — поэтому и сам GET ставим точно в момент
+/// перехода, а не по круговому опросу: реакция в пределах секунды.
+///
+/// Ждём не дольше минуты: за это время список контестов может обновиться
+/// (по WS) и добавиться контест с более ранним переходом.
+pub fn contest_status_watcher() {
+    static STARTED: OnceLock<()> = OnceLock::new();
+    if STARTED.set(()).is_err() {
+        return;
+    }
+    spawn_local(async move {
+        const MAX_WAIT_MS: i64 = 60_000;
+        loop {
+            let now = Utc::now();
+            let next = STATE
+                .read()
+                .contests
+                .iter()
+                .flat_map(|c| [c.starts_at, c.finishes_at])
+                .filter(|t| *t > now)
+                .min();
+            let wait = match next {
+                // +1s: в момент finishes_at сервер может ещё отдавать контест
+                // как незавершённый.
+                Some(t) => (t - now).num_milliseconds().clamp(0, MAX_WAIT_MS) + 1_000,
+                None => MAX_WAIT_MS,
+            };
+            gloo_timers::future::TimeoutFuture::new(wait.min(MAX_WAIT_MS) as u32).await;
+            refresh_contests_on_status_change().await;
+        }
+    });
+}
+
 const WS_RETRY_MS: u32 = 2_000;
 /// Heartbeat чаще, чем типичные idle-таймауты NAT/прокси (~25-30с),
 /// иначе молчащий сокет режут. Сервер текстовые сообщения игнорирует.
@@ -260,7 +300,6 @@ where
                     if sink.send(Message::Text(WS_HEARTBEAT.into())).await.is_err() {
                         break;
                     }
-                    refresh_contests_on_status_change().await;
                 }
             }
         }

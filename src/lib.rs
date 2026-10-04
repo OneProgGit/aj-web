@@ -181,6 +181,11 @@ pub fn App() -> Element {
         }
     }
 
+    // Статус контеста выводится из времени, но условия и разбор приходят только
+    // с сервера — за ними нужно следить на любой странице, а не только там,
+    // где открыт контест.
+    crate::components::contest_ws::contest_status_watcher();
+
     rsx! {
         document::Stylesheet { href: asset!("/public/tailwind.css") }
         div { class: "min-h-screen bg-base-100",

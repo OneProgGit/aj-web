@@ -106,11 +106,16 @@ fn GuardLayout() -> Element {
         document::Script { src: "https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js" }
         div { class: "min-h-dvh flex flex-col",
         nav { class: "navbar bg-base-100 border-b border-base-300",
-            div { class: "flex items-center gap-4 px-3 sm:px-6 max-w-7xl mx-auto w-full",
+            // На мобиле два ряда: сверху логотип + переключатель языка,
+            // под ними вкладки горизонтально (со скроллом). На sm+ всё
+            // в одну строку, как раньше.
+            div { class: "flex flex-wrap items-center gap-2 px-3 sm:gap-4 sm:px-6 max-w-7xl mx-auto w-full",
                 // Логотип — не кнопка: просто текст-ссылка, как в oneprog-cup.
                 Link { to: "/", class: "font-bold px-2 py-1 text-base-content hover:text-primary", "ada-judge" }
                 if logged_in {
-                    div { class: "tabs tabs-box max-w-full overflow-x-auto",
+                    // order-last + w-full: на мобиле вкладки уходят вторым
+                    // рядом на всю ширину; на sm+ возвращаются в общий ряд.
+                    div { class: "tabs tabs-box max-w-full overflow-x-auto order-last w-full sm:order-none sm:w-auto",
                         Link {
                             to: Route::Home {},
                             class: if matches!(&location, Route::Home {} | Route::Contest { .. }) { "tab gap-2 tab-active" } else { "tab gap-2" },
@@ -141,11 +146,13 @@ fn GuardLayout() -> Element {
                         }
                     }
                 }
-                div { class: "flex-1" }
+                // ml-auto: на мобиле переключатель прижат вправо в первом
+                // ряду рядом с логотипом; на sm+ правее его толкает тот же margin.
+                // Отдельный flex-1 больше не нужен.
                 // Переключатель языка — кнопками, как фильтры статусов:
                 // вариантов всего два, текущий виден сразу, переключение
                 // в одно нажатие. Названия языков не переводим.
-                div { class: "flex items-center gap-1 rounded-lg border border-base-300 bg-base-200 p-0.5",
+                div { class: "ml-auto flex items-center gap-1 rounded-lg border border-base-300 bg-base-200 p-0.5",
                     for (code, title) in [("ru", "русский"), ("en", "english")] {
                         button {
                             class: if lang == *code {

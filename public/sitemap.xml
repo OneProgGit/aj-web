@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <!-- Публичные страницы. Остальное за авторизацией: статический sitemap
+       их перечислить не может (id контестов и пользователей динамические),
+       для них нужен либо SSR, либо динамический sitemap на бэкенде. -->
+  <url>
+    <loc>https://aj-web.oneprog.org/</loc>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://aj-web.oneprog.org/login</loc>
+    <changefreq>yearly</changefreq>
+    <priority>0.3</priority>
+  </url>
+  <url>
+    <loc>https://aj-web.oneprog.org/register</loc>
+    <changefreq>yearly</changefreq>
+    <priority>0.3</priority>
+  </url>
+</urlset>

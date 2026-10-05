@@ -107,3 +107,20 @@ where
 pub fn unsubscribe_user_ws(user_id: i64) {
     unsubscribe_ws(&user_key(user_id));
 }
+
+/// Подписка на свой профиль: `/users/me/ws`.
+///
+/// Удобнее `user_ws(my_id)`: id знать не нужно (сервер берёт его из токена),
+/// а сама подписка уже за слоем авторизации — в отличие от публичного
+/// `/users/{id}/ws`.
+pub fn own_profile_ws<F, Fut>(on_update: F)
+where
+    F: Fn(UsersEvent) -> Fut + 'static,
+    Fut: std::future::Future<Output = ()> + 'static,
+{
+    subscribe_ws("user:me".to_string(), "/users/me/ws".to_string(), on_update);
+}
+
+pub fn unsubscribe_own_profile_ws() {
+    unsubscribe_ws("user:me");
+}

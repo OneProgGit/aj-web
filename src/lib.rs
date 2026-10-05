@@ -13,7 +13,7 @@ use dioxus::router::Link;
 
 use crate::{
     alerts::AlertHost,
-    components::users_ws::user_ws,
+    components::users_ws::{own_profile_ws, unsubscribe_own_profile_ws},
     pages::{
         account_profile::Account, contest::Contest, home::Home, login::Login, problems::Problems,
         register::Register, user_private_profile::UserPrivateProfile, user_profile::UserProfile,
@@ -182,8 +182,10 @@ pub fn App() -> Element {
     // и тогда вкладки навбара должны появиться/пропасть без перезагрузки.
     // По событию перечитываем /users/me — STATE.user обновится, навбар
     // перерисуется сам, потому что читает is_admin()/is_owner() из него.
-    fn watch_own_profile(user_id: i64) {
-        user_ws(user_id, move |_event| async move {
+    fn watch_own_profile() {
+        // Подписка одна на приложение (ключ "user:me"), id не нужен: сервер
+        // сам понимает, чей профиль слать, по токену из query.
+        own_profile_ws(move |_event| async move {
             if let Ok(me) = crate::api::users::get_me(&crate::state::token()).await {
                 STATE.write().user = Some(me);
             }
@@ -194,15 +196,16 @@ pub fn App() -> Element {
     // или смениться (выход и вход другим пользователем). Сравнение на каждом
     // рендере вместо once-флага — иначе подписка, стартовавшая до логина,
     // никогда не откроется. Старую подписку закрываем, чтобы не копить.
-    let mut watched_user = use_signal(|| None::<i64>);
-    let current_user = STATE.read().user.as_ref().map(|u| u.id);
-    if watched_user() != current_user {
-        if let Some(old) = watched_user() {
-            crate::components::users_ws::unsubscribe_user_ws(old);
-        }
-        watched_user.set(current_user);
-        if let Some(id) = current_user {
-            watch_own_profile(id);
+    // Подписка живёт пока залогинены: при выходе закрываем, при входе
+    // открываем. user_id здесь не нужен — сервер определяет «свой» сам.
+    let mut watching_own = use_signal(|| false);
+    let logged_in = STATE.read().user.is_some();
+    if watching_own() != logged_in {
+        watching_own.set(logged_in);
+        if logged_in {
+            watch_own_profile();
+        } else {
+            unsubscribe_own_profile_ws();
         }
     }
 

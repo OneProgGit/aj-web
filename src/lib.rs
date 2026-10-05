@@ -13,6 +13,7 @@ use dioxus::router::Link;
 
 use crate::{
     alerts::AlertHost,
+    components::users_ws::user_ws,
     pages::{
         account_profile::Account, contest::Contest, home::Home, login::Login, problems::Problems,
         register::Register, user_private_profile::UserPrivateProfile, user_profile::UserProfile,
@@ -177,15 +178,43 @@ fn GuardLayout() -> Element {
 pub fn App() -> Element {
     let mut loaded_user = use_signal(|| false);
 
+    // Подписка на свой профиль: уровень админа может сменить другой админ,
+    // и тогда вкладки навбара должны появиться/пропасть без перезагрузки.
+    // По событию перечитываем /users/me — STATE.user обновится, навбар
+    // перерисуется сам, потому что читает is_admin()/is_owner() из него.
+    fn watch_own_profile(user_id: i64) {
+        user_ws(user_id, move |_event| async move {
+            if let Ok(me) = crate::api::users::get_me(&crate::state::token()).await {
+                STATE.write().user = Some(me);
+            }
+        });
+    }
+
+    // За кем следим сейчас: id может появиться позже (логин без перезагрузки)
+    // или смениться (выход и вход другим пользователем). Сравнение на каждом
+    // рендере вместо once-флага — иначе подписка, стартовавшая до логина,
+    // никогда не откроется. Старую подписку закрываем, чтобы не копить.
+    let mut watched_user = use_signal(|| None::<i64>);
+    let current_user = STATE.read().user.as_ref().map(|u| u.id);
+    if watched_user() != current_user {
+        if let Some(old) = watched_user() {
+            crate::components::users_ws::unsubscribe_user_ws(old);
+        }
+        watched_user.set(current_user);
+        if let Some(id) = current_user {
+            watch_own_profile(id);
+        }
+    }
+
     // On a fresh page load (e.g. after F5 or a full navigation) the user
     // profile is only in memory, so re-fetch /users/me when a token exists.
+    // Подписка выше стартует сама, как только STATE.user появится.
     if !*loaded_user.read() {
         loaded_user.set(true);
-        let has_token = STATE.read().token.is_some();
-        let user_missing = STATE.read().user.is_none();
-        if has_token && user_missing {
+        if STATE.read().token.is_some() && STATE.read().user.is_none() {
+            let token = STATE.read().token.clone();
             spawn(async move {
-                if let Ok(me) = crate::api::users::get_me(&crate::state::token()).await {
+                if let Ok(me) = crate::api::users::get_me(&token).await {
                     STATE.write().user = Some(me);
                 }
             });

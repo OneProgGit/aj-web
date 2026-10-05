@@ -142,7 +142,7 @@ pub fn UserPrivateProfile(user_id: i64) -> Element {
                                     match api::users::update_admin_level(user_id, &level, &token).await {
                                         Ok(()) => {
                                             busy.set(false);
-                                            show_alert(AlertKind::Success, i18n::tr(&crate::state::language(), "Уровень админа обновлён", "Admin level updated"));
+                                            show_alert(AlertKind::Info, i18n::tr(&crate::state::language(), "Уровень админа обновлён", "Admin level updated"));
                                             if let Some(mut u) = user() {
                                                 u.admin_level = level.clone();
                                                 user.set(Some(u));
@@ -187,7 +187,7 @@ pub fn UserPrivateProfile(user_id: i64) -> Element {
                                 match api::users::delete_user_account(user_id, &request, &token).await {
                                     Ok(()) => {
                                         deleting.set(false);
-                                        show_alert(AlertKind::Success, i18n::tr(&crate::state::language(), "Аккаунт удалён", "Account deleted"));
+                                        show_alert(AlertKind::Info, i18n::tr(&crate::state::language(), "Аккаунт удалён", "Account deleted"));
                                         if STATE.read().user.as_ref().is_some_and(|me| me.id == user_id) {
                                             STATE.write().user = None;
                                             STATE.write().token = None;

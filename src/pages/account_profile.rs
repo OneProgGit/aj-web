@@ -101,7 +101,7 @@ pub fn Account() -> Element {
                                     STATE.write().user = None;
                                     STATE.write().token = None;
                                     crate::state::clear_token();
-                                    show_alert(AlertKind::Success, i18n::tr(&crate::state::language(), "Аккаунт удалён", "Account deleted"));
+                                    show_alert(AlertKind::Info, i18n::tr(&crate::state::language(), "Аккаунт удалён", "Account deleted"));
                                     navigator.push(crate::Route::Welcome {});
                                 }
                                 Err(e) => show_alert(AlertKind::Error, e),

@@ -113,6 +113,7 @@ pub fn Problems() -> Element {
                                 match api::problems::create_problem(bytes, &token).await {
                                     Ok(()) => {
                                         busy.set(false);
+                                        show_alert(AlertKind::Info, i18n::tr(&crate::state::language(), "Задача создана", "Problem created"));
                                         let all = all_problems();
                                         let res = if all {
                                             api::problems::get_all_problems(&token).await

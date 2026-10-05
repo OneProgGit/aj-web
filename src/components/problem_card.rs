@@ -258,6 +258,7 @@ pub fn ProblemCard(props: ProblemCardProps) -> Element {
                                                 Ok(()) => {
                                                     picked_archive.set(None);
                                                     admin_open.set(false);
+                                                    crate::alerts::show_alert(crate::alerts::AlertKind::Info, crate::i18n::tr(&crate::state::language(), "Задача обновлена", "Problem updated"));
                                                     on_changed.call(());
                                                 }
                                                 Err(e) => crate::alerts::show_alert(crate::alerts::AlertKind::Error, e),
@@ -284,6 +285,7 @@ pub fn ProblemCard(props: ProblemCardProps) -> Element {
                                     Ok(()) => {
                                         deleting.set(false);
                                         admin_open.set(false);
+                                        crate::alerts::show_alert(crate::alerts::AlertKind::Info, crate::i18n::tr(&crate::state::language(), "Задача удалена", "Problem deleted"));
                                         on_changed.call(());
                                     }
                                     Err(e) => crate::alerts::show_alert(crate::alerts::AlertKind::Error, e),

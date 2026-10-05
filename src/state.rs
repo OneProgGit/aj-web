@@ -84,6 +84,9 @@ pub struct GlobalState {
     pub questions: Vec<ProblemQuestion>,
     pub submissions: Vec<Submission>,
     pub all_submissions: bool,
+    /// Задача, выбранная на странице контеста: нужна ws-ленте, чтобы по
+    /// событию о посылке перечитать список посылок именно этой задачи.
+    pub selected_problem_id: Option<i64>,
     pub leaderboard: Vec<LeaderboardRow>,
     pub problems: Vec<PublicProblemConfig>,
     pub users: Vec<PrivateUserData>,
@@ -142,8 +145,14 @@ impl GlobalState {
 /// the current language, token and cached data.
 pub static STATE: GlobalSignal<GlobalState> = GlobalSignal::new(GlobalState::new);
 
-/// Contest ids with a live ws subscription (dedup across remounts).
-pub static WS_SUBSCRIBED: GlobalSignal<std::collections::HashSet<i64>> =
+/// Ключи открытых ws-подписок.
+///
+/// Строки, а не id: ленты и одиночные каналы с разными сущностями делят
+/// одно множество, и при ключе-i64 подписка на пользователя #5 совпала бы с
+/// подпиской на контест #5 — вторая молча не открылась бы.
+/// Виды: `contest:{id}`, `contests:all`, `contests:my`, `problems:all`,
+/// `problems:my`, `users:all`, `user:{id}`.
+pub static WS_SUBSCRIBED: GlobalSignal<std::collections::HashSet<String>> =
     GlobalSignal::new(std::collections::HashSet::new);
 
 /// Opens an external link in a new browser tab. Mirrors `AJAppCallbacks.open-link`.

@@ -9,6 +9,7 @@ use crate::{
         delete_form::DeleteForm,
         icon::{Icon, icon_element},
         loading::Loading,
+        users_ws::{unsubscribe_user_ws, user_ws},
     },
     i18n,
     models::{DeletionRequest, users::AdminLevel},
@@ -31,6 +32,21 @@ pub fn UserPrivateProfile(user_id: i64) -> Element {
         started_for.set(Some(user_id));
         loaded.set(false);
         user.set(None);
+        // Живое обновление профиля через одиночную ленту: событие молча
+        // перечитывает сигнал страницы, включая индекс уровня в форме.
+        let mut live_user = user;
+        let mut live_level = level_idx;
+        user_ws(user_id, move |_event| async move {
+            let token = crate::state::token();
+            if let Ok(fetched) = api::users::get_private_user(user_id, &token).await {
+                live_level.set(match fetched.admin_level {
+                    AdminLevel::User => 0,
+                    AdminLevel::Admin => 1,
+                    AdminLevel::Owner => 2,
+                });
+                live_user.set(Some(fetched));
+            }
+        });
         let token = crate::state::token();
         spawn(async move {
             match api::users::get_private_user(user_id, &token).await {
@@ -47,6 +63,8 @@ pub fn UserPrivateProfile(user_id: i64) -> Element {
             loaded.set(true);
         });
     }
+
+    use_drop(move || unsubscribe_user_ws(user_id));
 
     let profile_data = user().map(|p| (p.admin_level.clone(), p));
 

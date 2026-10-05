@@ -4,15 +4,14 @@ use std::sync::{Mutex, OnceLock};
 use chrono::Utc;
 
 use dioxus::prelude::*;
-use futures_util::{FutureExt, SinkExt, StreamExt};
-use gloo_net::websocket::Message;
-use gloo_net::websocket::futures::WebSocket;
 use wasm_bindgen_futures::spawn_local;
+
+use super::ws::{subscribe_ws, unsubscribe_ws};
 
 use crate::{
     alerts::{AlertKind, show_alert},
     i18n,
-    models::contests::ContestEvent,
+    models::contests::ContestsEvent,
     state::{ContestStatus, STATE, contest_status},
 };
 
@@ -47,7 +46,7 @@ async fn refresh_contest(id: i64) -> bool {
         Err(e) => {
             if e.contains("Forbidden") || e.contains("Доступ запрещён") {
                 STATE.write().contests.retain(|c| c.id != id);
-                crate::state::WS_SUBSCRIBED.write().remove(&id);
+                crate::components::ws::unsubscribe_ws(&contest_key(id));
             }
             false
         }
@@ -156,7 +155,7 @@ async fn refresh_contests_on_status_change() {
         refresh_contest(id).await;
         // Условия перечитываем только для открытого контеста: STATE.contest_problems
         // принадлежит той странице, чей сокет открыт. У неё же мы и подписаны.
-        if started && crate::state::WS_SUBSCRIBED.read().contains(&id) {
+        if started && crate::components::ws::is_subscribed(&contest_key(id)) {
             reload_problems(id).await;
         }
     }
@@ -200,121 +199,43 @@ pub fn contest_status_watcher() {
     });
 }
 
-const WS_RETRY_MS: u32 = 2_000;
-/// Heartbeat чаще, чем типичные idle-таймауты NAT/прокси (~25-30с),
-/// иначе молчащий сокет режут. Сервер текстовые сообщения игнорирует.
-const WS_PING_MS: u32 = 15_000;
-const WS_HEARTBEAT: &str = "__ping__";
-
-/// Открывает ws на /contests/{id}/ws?token= (Bearer-токен из localStorage,
-/// заголовки браузерный WebSocket слать не умеет) и на каждое событие
-/// обновляет глобальное состояние.
+/// Открывает ws на /contests/{id}/ws и на каждое событие обновляет
+/// глобальное состояние.
 pub fn contest_ws(contest_id: i64) {
-    if !crate::state::WS_SUBSCRIBED.write().insert(contest_id) {
-        return;
-    }
-    spawn_local(async move {
-        loop {
-            if !crate::state::WS_SUBSCRIBED.read().contains(&contest_id) {
-                break;
-            }
-            ws_loop(&ws_url(&format!("/contests/{contest_id}/ws")), |event| {
-                handle_event(Some(contest_id), event)
-            })
-            .await;
-            gloo_timers::future::TimeoutFuture::new(WS_RETRY_MS).await;
-        }
-    });
+    subscribe_ws(
+        contest_key(contest_id),
+        format!("/contests/{contest_id}/ws"),
+        move |event| handle_event(Some(contest_id), event),
+    );
+}
+
+/// Ключ подписки на контест: он же используется для отписки.
+#[must_use]
+pub fn contest_key(contest_id: i64) -> String {
+    format!("contest:{contest_id}")
 }
 
 /// Подписка списка контестов: все (`/contests/ws`) или свои (`/contests/my/ws`).
 /// Обрабатывает только членство списка (создание/обновление/удаление),
 /// чтобы не спамить тостами постов чужих контестов.
 pub fn contests_feed_ws(mine: bool) {
-    const FEED_ALL_ID: i64 = -1;
-    const FEED_MY_ID: i64 = -2;
-    let key = if mine { FEED_MY_ID } else { FEED_ALL_ID };
-    if !crate::state::WS_SUBSCRIBED.write().insert(key) {
-        return;
-    }
-    spawn_local(async move {
-        let path = if mine {
-            "/contests/my/ws"
-        } else {
-            "/contests/ws"
-        };
-        loop {
-            if !crate::state::WS_SUBSCRIBED.read().contains(&key) {
-                break;
-            }
-            ws_loop(&ws_url(path), handle_feed_event).await;
-            gloo_timers::future::TimeoutFuture::new(WS_RETRY_MS).await;
-        }
-    });
-}
-
-fn ws_url(path: &str) -> String {
-    let base = crate::api::api_base();
-    let scheme = if base.starts_with("https") {
-        "wss"
+    let (key, path) = if mine {
+        ("contests:my".to_string(), "/contests/my/ws")
     } else {
-        "ws"
+        ("contests:all".to_string(), "/contests/ws")
     };
-    let host_port = base
-        .trim_start_matches("https://")
-        .trim_start_matches("http://")
-        .trim_end_matches('/');
-    let mut url = format!("{scheme}://{host_port}{path}");
-    // Браузерный WebSocket не шлёт заголовки — токен отдаём query-параметром.
-    if let Some(token) = crate::state::token() {
-        url.push_str(if path.contains('?') {
-            "&token="
-        } else {
-            "?token="
-        });
-        url.push_str(&token);
-    }
-    url
+    subscribe_ws(key, path.to_string(), handle_feed_event);
 }
 
-/// Один цикл подключения (разрыв снаружи — обычный ретрай).
-async fn ws_loop<Fut>(url: &str, on_event: impl Fn(ContestEvent) -> Fut)
-where
-    Fut: std::future::Future<Output = ()>,
-{
-    if let Ok(socket) = WebSocket::open(url) {
-        let (mut sink, mut stream) = socket.split();
-        loop {
-            let timer = Box::pin(gloo_timers::future::TimeoutFuture::new(WS_PING_MS).fuse());
-            futures_util::select! {
-                msg = stream.next().fuse() => {
-                    let Some(Ok(Message::Text(text))) = msg else { break };
-                    if text == WS_HEARTBEAT {
-                        continue;
-                    }
-                    if let Ok(event) = serde_json::from_str::<ContestEvent>(&text) {
-                        on_event(event).await;
-                    }
-                },
-                _ = timer.fuse() => {
-                    if sink.send(Message::Text(WS_HEARTBEAT.into())).await.is_err() {
-                        break;
-                    }
-                }
-            }
-        }
-    }
-}
-
-async fn handle_feed_event(event: ContestEvent) {
+async fn handle_feed_event(event: ContestsEvent) {
     handle_event(None, event).await;
 }
 
-async fn handle_event(contest_id: Option<i64>, event: ContestEvent) {
+async fn handle_event(contest_id: Option<i64>, event: ContestsEvent) {
     let lang = crate::state::language();
     // В фиде (контекста контеста нет) — только членство списка.
     let notice = match &event {
-        ContestEvent::NewPost(id) => {
+        ContestsEvent::NewPost(id) => {
             if let Some(cid) = contest_id {
                 reload_posts(cid).await;
             }
@@ -326,7 +247,7 @@ async fn handle_event(contest_id: Option<i64>, event: ContestEvent) {
                 )
             })
         }
-        ContestEvent::PostUpdated(id) => {
+        ContestsEvent::PostUpdated(id) => {
             if let Some(cid) = contest_id {
                 reload_posts(cid).await;
                 // Номер как в карточках: позиция с конца списка.
@@ -346,7 +267,7 @@ async fn handle_event(contest_id: Option<i64>, event: ContestEvent) {
                 None
             }
         }
-        ContestEvent::PostDeleted(id) => {
+        ContestsEvent::PostDeleted(id) => {
             if let Some(cid) = contest_id {
                 // Индекс берём до перезагрузки — после неё поста уже нет.
                 let n = {
@@ -368,7 +289,7 @@ async fn handle_event(contest_id: Option<i64>, event: ContestEvent) {
                 None
             }
         }
-        ContestEvent::ContestUpdated(id) => {
+        ContestsEvent::ContestUpdated(id) => {
             // Тост только если контест нам виден; скрытый тихо исчезает из списка.
             if refresh_contest(*id).await {
                 Some(i18n::tr(
@@ -380,13 +301,13 @@ async fn handle_event(contest_id: Option<i64>, event: ContestEvent) {
                 None
             }
         }
-        ContestEvent::ContestDeleted(id) => {
+        ContestsEvent::ContestDeleted(id) => {
             // Тост только если контест был у нас в списке; чужой/скрытый — тихо.
             let mut state = STATE.write();
             let had = state.contests.iter().any(|c| c.id == *id);
             state.contests.retain(|c| c.id != *id);
             drop(state);
-            crate::state::WS_SUBSCRIBED.write().remove(id);
+            unsubscribe_ws(&contest_key(*id));
             had.then(|| {
                 i18n::tr(
                     &lang,
@@ -395,7 +316,7 @@ async fn handle_event(contest_id: Option<i64>, event: ContestEvent) {
                 )
             })
         }
-        ContestEvent::NewContest(id) => {
+        ContestsEvent::NewContest(id) => {
             // Тост только если контест нам виден (скрытый от нас — тихо).
             let token = crate::state::token();
             match crate::api::contests::get_contest(*id, &token).await {
@@ -410,7 +331,7 @@ async fn handle_event(contest_id: Option<i64>, event: ContestEvent) {
                 Err(_) => None,
             }
         }
-        ContestEvent::NewProblem(id) => {
+        ContestsEvent::NewProblem(id) => {
             if let Some(cid) = contest_id {
                 reload_problems(cid).await;
             }
@@ -422,7 +343,7 @@ async fn handle_event(contest_id: Option<i64>, event: ContestEvent) {
                 )
             })
         }
-        ContestEvent::ProblemUpdated(id) => {
+        ContestsEvent::ProblemUpdated(id) => {
             if let Some(cid) = contest_id {
                 reload_problems(cid).await;
             }
@@ -434,7 +355,7 @@ async fn handle_event(contest_id: Option<i64>, event: ContestEvent) {
                 )
             })
         }
-        ContestEvent::ProblemDeleted(id) => {
+        ContestsEvent::ProblemDeleted(id) => {
             if let Some(cid) = contest_id {
                 reload_problems(cid).await;
             }
@@ -446,7 +367,29 @@ async fn handle_event(contest_id: Option<i64>, event: ContestEvent) {
                 )
             })
         }
-        ContestEvent::NewProblemQuestion(id) => {
+        // Посылки: в 0.10.13 по ним приходят отдельные события, раньше список
+        // обновлялся только по кнопке. В контексте контеста перечитываем список
+        // и молчим — тост о новой посылке чужого контеста здесь лишний.
+        ContestsEvent::NewSubmission(_) | ContestsEvent::SubmissionUpdated(_) => {
+            if let Some(cid) = contest_id {
+                let pid = STATE.read().selected_problem_id;
+                if let Some(pid) = pid {
+                    let all = STATE.read().all_submissions;
+                    let token = crate::state::token();
+                    let res = if all {
+                        crate::api::problems::get_problem_submissions_all(pid, &token).await
+                    } else {
+                        crate::api::problems::get_problem_submissions_my(pid, &token).await
+                    };
+                    if let Ok(subs) = res {
+                        STATE.write().submissions = subs;
+                    }
+                }
+                let _ = cid;
+            }
+            None
+        }
+        ContestsEvent::NewProblemQuestion(id) => {
             if let Some(cid) = contest_id {
                 reload_questions(cid).await;
             }
@@ -458,7 +401,7 @@ async fn handle_event(contest_id: Option<i64>, event: ContestEvent) {
                 )
             })
         }
-        ContestEvent::ProblemQuestionDeleted(id) => {
+        ContestsEvent::ProblemQuestionDeleted(id) => {
             if let Some(cid) = contest_id {
                 let n = {
                     let state = STATE.read();
@@ -479,7 +422,7 @@ async fn handle_event(contest_id: Option<i64>, event: ContestEvent) {
                 None
             }
         }
-        ContestEvent::ProblemQuestionAnswered(id) => {
+        ContestsEvent::ProblemQuestionAnswered(id) => {
             if let Some(cid) = contest_id {
                 reload_questions(cid).await;
                 let state = STATE.read();

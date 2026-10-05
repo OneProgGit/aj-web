@@ -9,6 +9,7 @@ use crate::{
         icon::{Icon, icon_element},
         loading::Loading,
         problem_card::ProblemCard,
+        problems_ws::problems_feed_ws,
     },
     i18n,
     state::STATE,
@@ -37,7 +38,10 @@ pub fn Problems() -> Element {
                 api::problems::get_my_problems(&token).await
             };
             match res {
-                Ok(list) => STATE.write().problems = list,
+                Ok(list) => {
+                    STATE.write().problems = list;
+                    problems_feed_ws(all);
+                }
                 Err(e) => show_alert(AlertKind::Error, e),
             }
             loading.set(false);
@@ -155,7 +159,10 @@ pub fn Problems() -> Element {
                                 };
                                 loading.set(false);
                                 match res {
-                                    Ok(list) => STATE.write().problems = list,
+                                    Ok(list) => {
+                                        STATE.write().problems = list;
+                                        problems_feed_ws(new_value);
+                                    }
                                     Err(e) => show_alert(AlertKind::Error, e),
                                 }
                             });

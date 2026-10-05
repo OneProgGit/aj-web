@@ -7,6 +7,7 @@ use crate::{
         admin_badge::AdminBadge,
         icon::{Icon, icon_element},
         loading::Loading,
+        users_ws::{unsubscribe_user_ws, user_ws},
     },
     i18n,
 };
@@ -25,6 +26,16 @@ pub fn UserProfile(user_id: i64) -> Element {
         started_for.set(Some(user_id));
         loaded.set(false);
         user.set(None);
+        // Живое обновление профиля: лента шлёт событие при смене данных,
+        // страница перечитывает свой сигнал — как у ленты контестов, где
+        // событие молча обновляет состояние без тостов.
+        let mut live_user = user;
+        user_ws(user_id, move |_event| async move {
+            let token = crate::state::token();
+            if let Ok(fetched) = api::users::get_public_user(user_id, &token).await {
+                live_user.set(Some(fetched));
+            }
+        });
         let token = crate::state::token();
         spawn(async move {
             let res = api::users::get_public_user(user_id, &token).await;
@@ -35,6 +46,8 @@ pub fn UserProfile(user_id: i64) -> Element {
             loaded.set(true);
         });
     }
+
+    use_drop(move || unsubscribe_user_ws(user_id));
 
     let profile_data = user().map(|p| (p.admin_level.clone(), p));
 

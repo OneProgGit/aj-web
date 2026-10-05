@@ -3,7 +3,7 @@ use dioxus::prelude::*;
 use crate::{
     alerts::show_alert,
     api,
-    components::{loading::Loading, user_card::UserCard},
+    components::{loading::Loading, user_card::UserCard, users_ws::users_feed_ws},
     i18n,
     state::STATE,
 };
@@ -21,7 +21,10 @@ pub fn Users() -> Element {
         spawn(async move {
             let res = api::users::get_all_users(&token).await;
             match res {
-                Ok(list) => STATE.write().users = list,
+                Ok(list) => {
+                    STATE.write().users = list;
+                    users_feed_ws();
+                }
                 Err(e) => show_alert(crate::alerts::AlertKind::Error, e),
             }
             loading.set(false);

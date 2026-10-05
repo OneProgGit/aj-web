@@ -107,7 +107,8 @@ fn GuardLayout() -> Element {
         div { class: "min-h-dvh flex flex-col",
         nav { class: "navbar bg-base-100 border-b border-base-300",
             div { class: "flex items-center gap-4 px-3 sm:px-6 max-w-7xl mx-auto w-full",
-                Link { to: "/", class: "btn btn-ghost btn-sm font-bold", "ada-judge" }
+                // Логотип — не кнопка: просто текст-ссылка, как в oneprog-cup.
+                Link { to: "/", class: "font-bold px-2 py-1 text-base-content hover:text-primary", "ada-judge" }
                 if logged_in {
                     div { class: "tabs tabs-box max-w-full overflow-x-auto",
                         Link {

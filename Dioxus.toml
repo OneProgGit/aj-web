@@ -6,3 +6,9 @@ out_dir = "dist"
 [web]
 app_id = 0
 base_path = "/"
+
+[web.app]
+# Статический <title> в index.html: виден до загрузки WASM, пока
+# document::Title из кода ещё не отработал. Без него вкладка
+# называется "dioxus".
+title = "ada-judge"

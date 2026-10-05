@@ -378,18 +378,18 @@ pub fn Contest(contest_id: i64) -> Element {
                             {icon_element(if paste_mode() { Icon::Upload } else { Icon::Pencil }, 16)}
                             span { "{paste_mode_label}" }
                         }
-                        // Штатный daisyUI file-input: отдельная кнопка поверх
-                        // скрытого инпута не работала — display:none делает
-                        // инпут не-labelable, и клик по <label> диалог не открывал.
                         if !paste_mode() {
-                            label { class: "flex flex-col gap-1",
-                                div { class: "label pb-1",
-                                    span { class: "label-text", "{pick_label}" }
-                                }
-                            input {
-                                id: "solution-file",
-                                r#type: "file",
-                                class: "file-input file-input-sm w-full max-w-md",
+                            label {
+                                r#for: "solution-file",
+                                class: "btn btn-ghost btn-sm gap-1",
+                                {icon_element(Icon::Upload, 16)}
+                                span { "{pick_label}" }
+                            }
+                        }
+                        input {
+                            id: "solution-file",
+                            r#type: "file",
+                            class: "hidden",
                             onchange: move |ev| {
                                 let input = ev
                                     .as_web_event()
@@ -417,8 +417,6 @@ pub fn Contest(contest_id: i64) -> Element {
                                     input.set_value("");
                                 }
                             },
-                            }
-                            }
                         }
 
                         if paste_mode() {

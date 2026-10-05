@@ -59,12 +59,16 @@ pub fn Problems() -> Element {
             div { class: "flex flex-wrap gap-4 items-center",
                 h1 { class: "text-2xl font-bold", "{i18n::tr(&lang, \"Задачи\", \"Problems\")}" }
 
-                label { class: "btn btn-ghost btn-sm gap-1",
-                    {icon_element(if picked().is_some() { Icon::Pencil } else { Icon::Upload }, 16)}
-                    span { "{pick_label}" }
+                label { class: "flex flex-col gap-1",
+                    div { class: "label pb-1",
+                        span { class: "label-text", "{pick_label}" }
+                    }
+                    // Штатный daisyUI file-input вместо <label class="btn"> со
+                    // скрытым инпутом: display:none делает инпут не-labelable,
+                    // и по кнопке диалог мог не открываться вовсе.
                     input {
                         r#type: "file",
-                        class: "hidden",
+                        class: "file-input file-input-sm w-full max-w-md",
                         onchange: move |ev| {
                             let input = ev
                                 .as_web_event()

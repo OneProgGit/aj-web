@@ -173,19 +173,23 @@ pub fn ProblemCard(props: ProblemCardProps) -> Element {
                                     "✕"
                                 }
                             }
-                            label { class: "btn btn-block btn-outline btn-sm gap-1",
-                            {icon_element(Icon::Upload, 16)}
-                            span {
-                                {if let Some((name, _)) = picked_archive() {
-                                    format!("{} ({})", i18n::tr(&lang, "выбрать архив", "pick archive"), name)
-                                } else {
-                                    i18n::tr(&lang, "выбрать архив", "pick archive")
-                                }}
+                            label { class: "flex flex-col gap-1",
+                            div { class: "label pb-1",
+                                span { class: "label-text",
+                                    {if let Some((name, _)) = picked_archive() {
+                                        format!("{} ({})", i18n::tr(&lang, "выбрать архив", "pick archive"), name)
+                                    } else {
+                                        i18n::tr(&lang, "выбрать архив", "pick archive")
+                                    }}
+                                }
                             }
+                            // Штатный daisyUI file-input: <label class="btn"> со
+                            // скрытым инпутом не работал — display:none делает
+                            // инпут не-labelable, клик диалог не открывал.
                             input {
                                 r#type: "file",
                                 accept: ".zip,.tgz,.tar.gz",
-                                class: "hidden",
+                                class: "file-input file-input-sm w-full",
                                 onchange: move |ev| {
                                     let input = ev
                                         .as_web_event()

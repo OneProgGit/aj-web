@@ -7,7 +7,7 @@ use crate::{
 };
 
 use super::{
-    contest_form::contest_form,
+    contest_form::{ContestForm, ContestInit},
     datetime_text::DateTimeText,
     delete_form::DeleteForm,
     icon::{Icon, icon_element},
@@ -265,10 +265,10 @@ pub fn ContestCard(props: ContestCardProps) -> Element {
                                     "✕"
                                 }
                             }
-                            {contest_form(
-                                Some(&contest),
-                                &i18n::tr(&lang, "изменить", "edit"),
-                                Callback::new(move |request| {
+                            ContestForm {
+                                initial: ContestInit(Some(contest.clone())),
+                                submit_label: i18n::tr(&lang, "изменить", "edit"),
+                                on_submit: Callback::new(move |request| {
                                     let token = STATE.read().token.clone();
                                     let id = contest.id;
                                     spawn(async move {
@@ -281,8 +281,8 @@ pub fn ContestCard(props: ContestCardProps) -> Element {
                                         }
                                     });
                                 }),
-                                Callback::new(move |_| editing.set(false)),
-                            )}
+                                on_cancel: Callback::new(move |_| editing.set(false)),
+                            }
                         }
                     }
                 }

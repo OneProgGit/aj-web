@@ -4,8 +4,11 @@ use crate::{
     alerts::{AlertKind, show_alert},
     api,
     components::{
-        contest_card::ContestCard, contest_form::contest_form, contest_ws::contests_feed_ws,
-        icon::Icon, loading::Loading,
+        contest_card::ContestCard,
+        contest_form::{ContestForm, ContestInit},
+        contest_ws::contests_feed_ws,
+        icon::Icon,
+        loading::Loading,
     },
     i18n,
     models::contests::ContestRequest,
@@ -207,10 +210,10 @@ pub fn Home() -> Element {
                                 "✕",
                             }
                         }
-                        {contest_form(
-                            None,
-                            &i18n::tr(&lang, "создать", "create"),
-                            Callback::new(move |request: ContestRequest| {
+                        ContestForm {
+                            initial: ContestInit(None),
+                            submit_label: i18n::tr(&lang, "создать", "create"),
+                            on_submit: Callback::new(move |request: ContestRequest| {
                                 let token = crate::state::token();
                                 spawn(async move {
                                     match api::contests::create_contest(&request, &token).await {
@@ -221,8 +224,8 @@ pub fn Home() -> Element {
                                     }
                                 });
                             }),
-                            Callback::new(move |_: MouseEvent| modal_open.set(false)),
-                        )}
+                            on_cancel: Callback::new(move |_: MouseEvent| modal_open.set(false)),
+                        }
                     }
                 }
             }

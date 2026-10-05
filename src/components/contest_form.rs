@@ -6,24 +6,59 @@ use crate::{
     models::contests::{ContestRequest, PublicContestConfig},
 };
 
-use super::datetime_input::datetime_input;
+use super::datetime_input::DateTimeInput;
 use super::icon::{Icon, icon_element};
+
+/// Обёртка для пропа `initial`.
+///
+/// Dioxus генерирует `PartialEq` для структуры пропсов и требует, чтобы каждый
+/// проп был `PartialEq`, а `PublicContestConfig` им не является. Сравниваем по
+/// id: этого достаточно, чтобы при открытии модалки на другом контесте форма
+/// пересоздалась с его данными.
+#[derive(Clone)]
+pub struct ContestInit(pub Option<PublicContestConfig>);
+
+impl PartialEq for ContestInit {
+    fn eq(&self, other: &Self) -> bool {
+        self.0.as_ref().map(|c| c.id) == other.0.as_ref().map(|c| c.id)
+    }
+}
 
 /// Create/edit form for a contest. Mirrors the «создать контест» and
 /// «изменить контест» popups from aj-app's HomePage / ContestCard.
-pub fn contest_form(
-    initial: Option<&PublicContestConfig>,
-    submit_label: &str,
+///
+/// Именно компонент, а не обычная функция: всеuse_signal ниже относятся к
+/// состоянию формы, и если объявить функцией, их хуки зарегистрируются в
+/// scope родителя. Родитель же вызывает форму внутри `if editing()`, то есть
+/// условно, — индексы хуков съезжают между рендерами, и сигналы формы
+/// оказываются не привязаны к редактируемому контесту (поля пустые).
+#[component]
+pub fn ContestForm(
+    initial: ContestInit,
+    submit_label: String,
     on_submit: EventHandler<ContestRequest>,
     on_cancel: EventHandler<MouseEvent>,
 ) -> Element {
     let lang = crate::state::language();
     let now = Utc::now();
 
-    let mut name_ru = use_signal(|| initial.map_or(String::new(), |c| c.name_ru.clone()));
-    let mut name_en = use_signal(|| initial.map_or(String::new(), |c| c.name_en.clone()));
-    let mut starts = use_signal(|| initial.map_or(now, |c| c.starts_at));
-    let init_secs = initial.map_or(7200, |c| (c.finishes_at - c.starts_at).num_seconds().max(0));
+    let mut name_ru = use_signal(|| {
+        initial
+            .0
+            .as_ref()
+            .map_or(String::new(), |c| c.name_ru.clone())
+    });
+    let mut name_en = use_signal(|| {
+        initial
+            .0
+            .as_ref()
+            .map_or(String::new(), |c| c.name_en.clone())
+    });
+    let mut starts = use_signal(|| initial.0.as_ref().map_or(now, |c| c.starts_at));
+    let init_secs = initial
+        .0
+        .as_ref()
+        .map_or(7200, |c| (c.finishes_at - c.starts_at).num_seconds().max(0));
     let mut dur_d = use_signal(|| (init_secs / 86400).to_string());
     let mut dur_h = use_signal(|| ((init_secs % 86400) / 3600).to_string());
     let mut dur_m = use_signal(|| ((init_secs % 3600) / 60).to_string());
@@ -32,16 +67,34 @@ pub fn contest_form(
         let p = |v: String| v.parse::<i64>().unwrap_or(0).max(0);
         p(dur_d()) * 86400 + p(dur_h()) * 3600 + p(dur_m()) * 60 + p(dur_s())
     };
-    let mut s_url_ru =
-        use_signal(|| initial.map_or(String::new(), |c| c.statements_url_ru.clone()));
-    let mut e_url_ru = use_signal(|| initial.map_or(String::new(), |c| c.editorial_url_ru.clone()));
-    let mut s_url_en =
-        use_signal(|| initial.map_or(String::new(), |c| c.statements_url_en.clone()));
-    let mut e_url_en = use_signal(|| initial.map_or(String::new(), |c| c.editorial_url_en.clone()));
+    let mut s_url_ru = use_signal(|| {
+        initial
+            .0
+            .as_ref()
+            .map_or(String::new(), |c| c.statements_url_ru.clone())
+    });
+    let mut e_url_ru = use_signal(|| {
+        initial
+            .0
+            .as_ref()
+            .map_or(String::new(), |c| c.editorial_url_ru.clone())
+    });
+    let mut s_url_en = use_signal(|| {
+        initial
+            .0
+            .as_ref()
+            .map_or(String::new(), |c| c.statements_url_en.clone())
+    });
+    let mut e_url_en = use_signal(|| {
+        initial
+            .0
+            .as_ref()
+            .map_or(String::new(), |c| c.editorial_url_en.clone())
+    });
     // Язык полей: 0 = русский, 1 = английский. По умолчанию — язык интерфейса,
     // но если у контеста на нём пусто, открываем противоположный: иначе при
     // редактировании показывалась бы пустая вкладка.
-    let mut url_lang = use_signal(|| match initial {
+    let mut url_lang = use_signal(|| match initial.0.as_ref() {
         Some(c) => {
             let en = lang == "en";
             let (primary, secondary) = if en {
@@ -53,13 +106,30 @@ pub fn contest_form(
         }
         None => u8::from(lang == "en"),
     });
-    let mut hidden = use_signal(|| initial.map(|c| c.hidden).unwrap_or(false));
-    let mut upsolving = use_signal(|| initial.map(|c| c.upsolving_enabled).unwrap_or(false));
-    let mut hide_solutions = use_signal(|| initial.map(|c| c.solutions_hidden).unwrap_or(false));
-    let mut hide_leaderboard =
-        use_signal(|| initial.map(|c| c.leaderboard_hidden).unwrap_or(false));
+    let mut hidden = use_signal(|| initial.0.as_ref().map(|c| c.hidden).unwrap_or(false));
+    let mut upsolving = use_signal(|| {
+        initial
+            .0
+            .as_ref()
+            .map(|c| c.upsolving_enabled)
+            .unwrap_or(false)
+    });
+    let mut hide_solutions = use_signal(|| {
+        initial
+            .0
+            .as_ref()
+            .map(|c| c.solutions_hidden)
+            .unwrap_or(false)
+    });
+    let mut hide_leaderboard = use_signal(|| {
+        initial
+            .0
+            .as_ref()
+            .map(|c| c.leaderboard_hidden)
+            .unwrap_or(false)
+    });
     let mut co_authors = use_signal(|| {
-        initial.map_or(String::new(), |c| {
+        initial.0.as_ref().map_or(String::new(), |c| {
             c.co_authors
                 .iter()
                 .map(i64::to_string)
@@ -140,7 +210,10 @@ pub fn contest_form(
                 "{i18n::tr(&lang, \"общие настройки\", \"common settings\")}"
             }
             span { class: "label-text", "{i18n::tr(&lang, \"начало в\", \"starts at\")}" }
-            {datetime_input(starts(), Callback::new(move |dt| starts.set(dt)))}
+            DateTimeInput {
+                value: starts(),
+                onchange: move |dt| starts.set(dt),
+            }
             span { class: "label-text", "{i18n::tr(&lang, \"продолжительность\", \"duration\")}" }
             div { class: "flex flex-wrap items-center gap-2",
                 input {
@@ -225,7 +298,7 @@ pub fn contest_form(
                     span { "{i18n::tr(&lang, \"отменить\", \"cancel\")}" }
                 }
                 button {
-                    class: if initial.is_some() { "btn btn-primary btn-sm gap-2" } else { "btn btn-neutral btn-sm gap-1" },
+                    class: if initial.0.is_some() { "btn btn-primary btn-sm gap-2" } else { "btn btn-neutral btn-sm gap-1" },
                     disabled: invalid,
                     onclick: move |_| {
                         let request = ContestRequest {
@@ -248,7 +321,7 @@ pub fn contest_form(
                         };
                         on_submit.call(request);
                     },
-                    {icon_element(if valid { if initial.is_some() { Icon::Pencil } else { Icon::Plus } } else { Icon::CircleBackslash }, 16)}
+                    {icon_element(if valid { if initial.0.is_some() { Icon::Pencil } else { Icon::Plus } } else { Icon::CircleBackslash }, 16)}
                     span { "{submit_label}" }
                 }
             }

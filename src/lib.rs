@@ -187,7 +187,22 @@ pub fn App() -> Element {
         // сам понимает, чей профиль слать, по токену из query.
         own_profile_ws(move |_event| async move {
             if let Ok(me) = crate::api::users::get_me(&crate::state::token()).await {
+                // Тост синий: уровень сменил кто-то другой, а вкладки сейчас
+                // перерисуются — без пояснения это выглядит как глюк.
+                let lang = crate::state::language();
+                let before = STATE.read().user.as_ref().map(|u| u.admin_level.clone());
+                let changed = before.as_ref().is_some_and(|old| *old != me.admin_level);
                 STATE.write().user = Some(me);
+                if changed {
+                    crate::alerts::show_alert(
+                        crate::alerts::AlertKind::Info,
+                        crate::i18n::tr(
+                            &lang,
+                            "Ваш уровень доступа изменён",
+                            "Your access level changed",
+                        ),
+                    );
+                }
             }
         });
     }

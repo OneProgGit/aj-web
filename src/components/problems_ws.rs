@@ -5,7 +5,8 @@
 //! задача, до которой у нас нет доступа, молча исчезает, как и у контеста.
 
 use crate::{
-    api,
+    alerts::{AlertKind, show_alert},
+    api, i18n,
     models::problems::{ProblemsEvent, PublicProblemConfig},
     state::STATE,
 };
@@ -49,15 +50,39 @@ fn upsert_problem(list: &mut Vec<PublicProblemConfig>, fresh: PublicProblemConfi
 }
 
 async fn handle_feed_event(event: ProblemsEvent) {
-    match event {
-        ProblemsEvent::NewProblem(id) | ProblemsEvent::ProblemUpdated(id) => {
+    // Уведомления — синие (Info): лента чужая, событие может прийти от
+    // кого угодно, и зелёный «успех» здесь неуместен — мы ничего не делали.
+    let lang = crate::state::language();
+    let notice = match event {
+        ProblemsEvent::NewProblem(id) => {
             // В ленте «свои» чужая задача просто не вернётся — и в списке её
             // не будет, ровно как до события.
             refresh_problem(id).await;
+            Some(i18n::tr(
+                &lang,
+                &format!("Новая задача #{id}"),
+                &format!("New problem #{id}"),
+            ))
+        }
+        ProblemsEvent::ProblemUpdated(id) => {
+            refresh_problem(id).await;
+            Some(i18n::tr(
+                &lang,
+                &format!("Задача #{id} обновлена"),
+                &format!("Problem #{id} updated"),
+            ))
         }
         ProblemsEvent::ProblemDeleted(id) => {
             STATE.write().problems.retain(|p| p.id != id);
+            Some(i18n::tr(
+                &lang,
+                &format!("Задача #{id} удалена"),
+                &format!("Problem #{id} deleted"),
+            ))
         }
+    };
+    if let Some(text) = notice {
+        show_alert(AlertKind::Info, text);
     }
 }
 

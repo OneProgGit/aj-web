@@ -6,7 +6,8 @@
 //! страница профиля сама решает, что перечитать, — лента не знает про UI.
 
 use crate::{
-    api,
+    alerts::{AlertKind, show_alert},
+    api, i18n,
     models::users::{PrivateUserData, UsersEvent},
     state::STATE,
 };
@@ -48,13 +49,37 @@ async fn refresh_user_in_list(id: i64) -> bool {
 }
 
 async fn handle_feed_event(event: UsersEvent) {
-    match event {
-        UsersEvent::NewUser(id) | UsersEvent::UserUpdated(id) => {
+    // Уведомления — синие (Info): событие чужое, зелёный «успех» здесь
+    // неуместен — мы ничего не делали.
+    let lang = crate::state::language();
+    let notice = match event {
+        UsersEvent::NewUser(id) => {
             refresh_user_in_list(id).await;
+            Some(i18n::tr(
+                &lang,
+                &format!("Новый пользователь #{id}"),
+                &format!("New user #{id}"),
+            ))
+        }
+        UsersEvent::UserUpdated(id) => {
+            refresh_user_in_list(id).await;
+            Some(i18n::tr(
+                &lang,
+                &format!("Пользователь #{id} обновлён"),
+                &format!("User #{id} updated"),
+            ))
         }
         UsersEvent::UserDeleted(id) => {
             STATE.write().users.retain(|u| u.id != id);
+            Some(i18n::tr(
+                &lang,
+                &format!("Пользователь #{id} удалён"),
+                &format!("User #{id} deleted"),
+            ))
         }
+    };
+    if let Some(text) = notice {
+        show_alert(AlertKind::Info, text);
     }
 }
 

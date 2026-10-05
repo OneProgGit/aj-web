@@ -72,19 +72,19 @@ fn GuardLayout() -> Element {
     let logged_in = STATE.read().token.is_some();
 
     let title = match &location {
-        Route::Welcome {} => i18n::tr(&lang, "Добро пожаловать — aj-web", "Welcome — aj-web"),
-        Route::Login {} => i18n::tr(&lang, "Вход — aj-web", "Login — aj-web"),
-        Route::Register {} => i18n::tr(&lang, "Регистрация — aj-web", "Register — aj-web"),
-        Route::Home {} => i18n::tr(&lang, "Контесты — aj-web", "Contests — aj-web"),
+        Route::Welcome {} => i18n::tr(&lang, "Добро пожаловать — ada-judge", "Welcome — ada-judge"),
+        Route::Login {} => i18n::tr(&lang, "Вход — ada-judge", "Login — ada-judge"),
+        Route::Register {} => i18n::tr(&lang, "Регистрация — ada-judge", "Register — ada-judge"),
+        Route::Home {} => i18n::tr(&lang, "Контесты — ada-judge", "Contests — ada-judge"),
         Route::Contest { contest_id } => i18n::tr(
             &lang,
-            &format!("Контест #{contest_id} — aj-web"),
-            &format!("Contest #{contest_id} — aj-web"),
+            &format!("Контест #{contest_id} — ada-judge"),
+            &format!("Contest #{contest_id} — ada-judge"),
         ),
-        Route::Problems {} => i18n::tr(&lang, "Задачи — aj-web", "Problems — aj-web"),
-        Route::Users {} => i18n::tr(&lang, "Пользователи — aj-web", "Users — aj-web"),
+        Route::Problems {} => i18n::tr(&lang, "Задачи — ada-judge", "Problems — ada-judge"),
+        Route::Users {} => i18n::tr(&lang, "Пользователи — ada-judge", "Users — ada-judge"),
         Route::Account {} | Route::UserProfile { .. } | Route::UserPrivateProfile { .. } => {
-            i18n::tr(&lang, "Профиль — aj-web", "Profile — aj-web")
+            i18n::tr(&lang, "Профиль — ada-judge", "Profile — ada-judge")
         }
     };
 

@@ -74,14 +74,79 @@ fn render_markdown(text: &str) -> String {
         rest = &rest[close_end..];
     }
     wrapped.push_str(rest);
+    // GitHub-admonitions `> [!NOTE]` и др.: pulldown их не знает и оставляет
+    // маркер текстом в обычном blockquote. Переписываем в
+    // `<div class="admonition admonition-note">` с заголовком.
+    let mut alerted = String::with_capacity(wrapped.len());
+    let mut rest = wrapped.as_str();
+    while let Some(pos) = rest.find("<blockquote>") {
+        let after_open = pos + "<blockquote>".len();
+        // Ищем маркер в первом параграфе цитаты.
+        let head = &rest[after_open..];
+        let head = head.strip_prefix('\n').unwrap_or(head);
+        let kind = ["NOTE", "TIP", "IMPORTANT", "WARNING", "CAUTION"]
+            .into_iter()
+            .find(|k| {
+                head.starts_with(&format!("<p>[!{k}]"))
+                    || head.starts_with(&format!("<p>[!{k}]<br"))
+            });
+        let Some(kind) = kind else {
+            alerted.push_str(&rest[..after_open]);
+            rest = &rest[after_open..];
+            continue;
+        };
+        let Some(close) = rest[after_open..].find("</blockquote>") else {
+            break;
+        };
+        let close_end = after_open + close + "</blockquote>".len();
+        let body = rest[after_open..after_open + close].to_string();
+        // Убираем маркер: `[!NOTE]` + один пробел/перенос за ним. Перед <p>
+        // в теле стоит перенос от `<blockquote>`, его тоже снимаем.
+        let body = body.strip_prefix('\n').unwrap_or(&body).to_string();
+        let marker = format!("<p>[!{kind}]");
+        let mut body = body;
+        if let Some(stripped) = body.strip_prefix(&marker) {
+            let stripped = stripped
+                .strip_prefix(' ')
+                .or_else(|| stripped.strip_prefix('\n'))
+                .unwrap_or(stripped);
+            body = format!("<p>{stripped}");
+        }
+        let title = match kind {
+            "NOTE" => "Note",
+            "TIP" => "Tip",
+            "IMPORTANT" => "Important",
+            "WARNING" => "Warning",
+            _ => "Caution",
+        };
+        let cls = kind.to_lowercase();
+        alerted.push_str(&rest[..pos]);
+        alerted.push_str(&format!(
+            "<div class=\"admonition admonition-{cls}\"><p class=\"admonition-title\">{title}</p>{body}</div>"
+        ));
+        rest = &rest[close_end..];
+    }
+    alerted.push_str(rest);
+    let wrapped = alerted;
     // data-lang для подписи языка + class для highlight.js (ammonia режет остальное).
     let mut builder = ammonia::Builder::default();
     builder.add_generic_attributes(["data-lang", "aria-hidden", "data-hl-done", "data-tex-done"]);
     builder.add_tags(&["dl", "dt", "dd", "sup", "sub", "span"]);
     builder.add_allowed_classes(
         "div",
-        ["md-codeblock", "md-codehead", "footnote-definition"],
+        [
+            "md-codeblock",
+            "md-codehead",
+            "footnote-definition",
+            "admonition",
+            "admonition-note",
+            "admonition-tip",
+            "admonition-important",
+            "admonition-warning",
+            "admonition-caution",
+        ],
     );
+    builder.add_allowed_classes("p", ["admonition-title"]);
     builder.add_allowed_classes("pre", ["md-gutter", "md-code"]);
     builder.add_allowed_classes("span", ["math", "math-inline", "math-display"]);
     builder.add_allowed_classes("sup", ["footnote-reference", "footnote-definition-label"]);
@@ -223,6 +288,24 @@ $$\\sum_{i=1}^n i$$
         );
         // Якоря сносок живые: ammonia не вырезала href="#…".
         assert!(html.contains("href=\"#"), "якоря сносок вырезаны:\n{html}");
+        // Admonitions: маркер съеден, обычная цитата не тронута.
+        let alerts = render_markdown("> [!WARNING] Осторожно.\n\n> Просто цитата.\n");
+        assert!(
+            alerts.contains("admonition-warning"),
+            "нет warning-блока:\n{alerts}"
+        );
+        assert!(
+            alerts.contains("admonition-title"),
+            "нет заголовка блока:\n{alerts}"
+        );
+        assert!(
+            !alerts.contains("[!WARNING]"),
+            "маркер остался в тексте:\n{alerts}"
+        );
+        assert!(
+            alerts.contains("<blockquote>"),
+            "обычная цитата сломана:\n{alerts}"
+        );
         // Definition list дошёл целиком.
         assert!(html.contains("<dl>"), "нет dl:\n{html}");
         assert!(html.contains("<dt>Термин</dt>"), "нет dt:\n{html}");

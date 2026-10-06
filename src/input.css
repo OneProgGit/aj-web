@@ -199,6 +199,25 @@ button.btn {
 .md-body div.footnote-definition { font-size: 0.9em; opacity: 0.9; margin-top: 0.6em; padding-top: 0.4em; border-top: 1px solid color-mix(in oklab, currentColor 20%, transparent); }
 .md-body div.footnote-definition sup.footnote-definition-label { margin-right: 0.4em; }
 
+/* --- Admonitions (`> [!NOTE]` и др.) ---
+   Цвета из темы через color-mix, чтобы работало в обеих: заливка —
+   приглушённый тон роли, полоса слева — насыщенная. */
+.md-body .admonition { margin: 0.6em 0; padding: 0.6em 0.9em; border-radius: 0.5rem; border-left: 4px solid; }
+.md-body .admonition > p { margin: 0.3em 0; }
+.md-body .admonition > p:first-child { margin-top: 0; }
+.md-body .admonition > p:last-child { margin-bottom: 0; }
+.md-body .admonition-title { font-weight: 700; }
+.md-body .admonition-note { background-color: color-mix(in oklab, var(--color-info) 12%, transparent); border-color: var(--color-info); }
+.md-body .admonition-note .admonition-title { color: var(--color-info); }
+.md-body .admonition-tip { background-color: color-mix(in oklab, var(--color-success) 12%, transparent); border-color: var(--color-success); }
+.md-body .admonition-tip .admonition-title { color: var(--color-success); }
+.md-body .admonition-important { background-color: color-mix(in oklab, var(--color-primary) 12%, transparent); border-color: var(--color-primary); }
+.md-body .admonition-important .admonition-title { color: var(--color-primary); }
+.md-body .admonition-warning { background-color: color-mix(in oklab, var(--color-warning) 14%, transparent); border-color: var(--color-warning); }
+.md-body .admonition-warning .admonition-title { color: var(--color-warning); }
+.md-body .admonition-caution { background-color: color-mix(in oklab, var(--color-error) 12%, transparent); border-color: var(--color-error); }
+.md-body .admonition-caution .admonition-title { color: var(--color-error); }
+
 /* --- Definition lists ---
    pulldown: `<dl><dt>термин</dt><dd>определение</dd></dl>`. */
 .md-body dl { margin: 0.5em 0; }

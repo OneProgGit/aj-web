@@ -206,7 +206,8 @@ button.btn {
 .md-body .admonition > p { margin: 0.3em 0; }
 .md-body .admonition > p:first-child { margin-top: 0; }
 .md-body .admonition > p:last-child { margin-bottom: 0; }
-.md-body .admonition-title { font-weight: 700; }
+.md-body .admonition-title { font-weight: 700; display: flex; align-items: center; gap: 0.4em; }
+.md-body .admonition-icon { width: 1.1em; height: 1.1em; flex: none; }
 .md-body .admonition-note { background-color: color-mix(in oklab, var(--color-info) 12%, transparent); border-color: var(--color-info); }
 .md-body .admonition-note .admonition-title { color: var(--color-info); }
 .md-body .admonition-tip { background-color: color-mix(in oklab, var(--color-success) 12%, transparent); border-color: var(--color-success); }

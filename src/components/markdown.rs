@@ -112,17 +112,26 @@ fn render_markdown(text: &str) -> String {
                 .unwrap_or(stripped);
             body = format!("<p>{stripped}");
         }
-        let title = match kind {
-            "NOTE" => "Note",
-            "TIP" => "Tip",
-            "IMPORTANT" => "Important",
-            "WARNING" => "Warning",
-            _ => "Caution",
+        // Иконка — как у GitHub: своя на каждый вид. SVG инлайном, т.к.
+        // заголовок собирается строкой, а не через rsx.
+        let (title, icon) = match kind {
+            "NOTE" => ("Note", super::icon::Icon::Info),
+            "TIP" => ("Tip", super::icon::Icon::Lightbulb),
+            "IMPORTANT" => ("Important", super::icon::Icon::Report),
+            "WARNING" => ("Warning", super::icon::Icon::Warning),
+            _ => ("Caution", super::icon::Icon::Block),
         };
+        let mut svg = String::from(
+            "<svg class=\"admonition-icon\" viewBox=\"0 0 24 24\" width=\"16\" height=\"16\" fill=\"currentColor\" aria-hidden=\"true\">",
+        );
+        for d in icon.path_data() {
+            svg.push_str(&format!("<path d=\"{d}\"></path>"));
+        }
+        svg.push_str("</svg>");
         let cls = kind.to_lowercase();
         alerted.push_str(&rest[..pos]);
         alerted.push_str(&format!(
-            "<div class=\"admonition admonition-{cls}\"><p class=\"admonition-title\">{title}</p>{body}</div>"
+            "<div class=\"admonition admonition-{cls}\"><p class=\"admonition-title\">{svg}{title}</p>{body}</div>"
         ));
         rest = &rest[close_end..];
     }
@@ -131,7 +140,10 @@ fn render_markdown(text: &str) -> String {
     // data-lang для подписи языка + class для highlight.js (ammonia режет остальное).
     let mut builder = ammonia::Builder::default();
     builder.add_generic_attributes(["data-lang", "aria-hidden", "data-hl-done", "data-tex-done"]);
-    builder.add_tags(&["dl", "dt", "dd", "sup", "sub", "span"]);
+    builder.add_tags(&["dl", "dt", "dd", "sup", "sub", "span", "svg", "path"]);
+    builder.add_allowed_classes("svg", ["admonition-icon"]);
+    builder.add_tag_attributes("svg", ["viewBox", "width", "height", "fill", "aria-hidden"]);
+    builder.add_tag_attributes("path", ["d"]);
     builder.add_allowed_classes(
         "div",
         [
@@ -306,6 +318,12 @@ $$\\sum_{i=1}^n i$$
             alerts.contains("<blockquote>"),
             "обычная цитата сломана:\n{alerts}"
         );
+        // Иконки: у каждого вида своя SVG, ammonia её не вырезала.
+        let all = render_markdown(
+            "> [!NOTE] n\n\n> [!TIP] t\n\n> [!IMPORTANT] i\n\n> [!WARNING] w\n\n> [!CAUTION] c\n",
+        );
+        assert_eq!(all.matches("<svg").count(), 5, "иконок не пять:\n{all}");
+        assert!(all.contains("admonition-icon"), "класса иконки нет:\n{all}");
         // Definition list дошёл целиком.
         assert!(html.contains("<dl>"), "нет dl:\n{html}");
         assert!(html.contains("<dt>Термин</dt>"), "нет dt:\n{html}");

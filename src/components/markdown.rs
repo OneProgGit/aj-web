@@ -4,7 +4,7 @@ use pulldown_cmark::{Options, Parser};
 use super::icon::{Icon, icon_element};
 use crate::i18n;
 
-fn render_markdown(text: &str) -> String {
+fn render_markdown(text: &str, lang: &str) -> String {
     let mut opts = Options::empty();
     opts.insert(Options::ENABLE_TABLES);
     opts.insert(Options::ENABLE_STRIKETHROUGH);
@@ -114,12 +114,29 @@ fn render_markdown(text: &str) -> String {
         }
         // Иконка — как у GitHub: своя на каждый вид. SVG инлайном, т.к.
         // заголовок собирается строкой, а не через rsx.
+        // Заголовок переводим: язык приходит сверху, т.к. render_markdown
+        // вызывается и из тестов, где языка интерфейса нет.
         let (title, icon) = match kind {
-            "NOTE" => ("Note", super::icon::Icon::Info),
-            "TIP" => ("Tip", super::icon::Icon::Lightbulb),
-            "IMPORTANT" => ("Important", super::icon::Icon::Report),
-            "WARNING" => ("Warning", super::icon::Icon::Warning),
-            _ => ("Caution", super::icon::Icon::Block),
+            "NOTE" => (
+                crate::i18n::tr(lang, "Примечание", "Note"),
+                super::icon::Icon::Info,
+            ),
+            "TIP" => (
+                crate::i18n::tr(lang, "Совет", "Tip"),
+                super::icon::Icon::Lightbulb,
+            ),
+            "IMPORTANT" => (
+                crate::i18n::tr(lang, "Важно", "Important"),
+                super::icon::Icon::Report,
+            ),
+            "WARNING" => (
+                crate::i18n::tr(lang, "Предупреждение", "Warning"),
+                super::icon::Icon::Warning,
+            ),
+            _ => (
+                crate::i18n::tr(lang, "Осторожно", "Caution"),
+                super::icon::Icon::Block,
+            ),
         };
         let mut svg = String::from(
             "<svg class=\"admonition-icon\" viewBox=\"0 0 24 24\" width=\"16\" height=\"16\" fill=\"currentColor\" aria-hidden=\"true\">",
@@ -176,7 +193,8 @@ fn render_markdown(text: &str) -> String {
 /// deps never recompute, so edited posts would stay stale.
 #[component]
 pub fn Markdown(text: String) -> Element {
-    let html = render_markdown(&text);
+    let lang = crate::state::language();
+    let html = render_markdown(&text, &lang);
     let mut applied = use_signal(|| html.clone());
     if applied.read().as_str() != html.as_str() {
         applied.set(html);
@@ -279,6 +297,7 @@ $$\\sum_{i=1}^n i$$
 Термин
 : Определение
 ",
+            "ru",
         );
         // Сноски обоих видов: ссылки и блоки определений дошли до выхода.
         assert!(
@@ -301,7 +320,7 @@ $$\\sum_{i=1}^n i$$
         // Якоря сносок живые: ammonia не вырезала href="#…".
         assert!(html.contains("href=\"#"), "якоря сносок вырезаны:\n{html}");
         // Admonitions: маркер съеден, обычная цитата не тронута.
-        let alerts = render_markdown("> [!WARNING] Осторожно.\n\n> Просто цитата.\n");
+        let alerts = render_markdown("> [!WARNING] Осторожно.\n\n> Просто цитата.\n", "ru");
         assert!(
             alerts.contains("admonition-warning"),
             "нет warning-блока:\n{alerts}"
@@ -321,9 +340,18 @@ $$\\sum_{i=1}^n i$$
         // Иконки: у каждого вида своя SVG, ammonia её не вырезала.
         let all = render_markdown(
             "> [!NOTE] n\n\n> [!TIP] t\n\n> [!IMPORTANT] i\n\n> [!WARNING] w\n\n> [!CAUTION] c\n",
+            "en",
         );
         assert_eq!(all.matches("<svg").count(), 5, "иконок не пять:\n{all}");
         assert!(all.contains("admonition-icon"), "класса иконки нет:\n{all}");
+        // Заголовки переведены: русским — русские, английским — английские.
+        let ru = render_markdown("> [!NOTE] n\n", "ru");
+        assert!(ru.contains(">Примечание<"), "нет русского заголовка:\n{ru}");
+        assert!(!ru.contains(">Note<"), "английский просочился в ru:\n{ru}");
+        assert!(
+            all.contains(">Warning<"),
+            "нет английского заголовка:\n{all}"
+        );
         // Definition list дошёл целиком.
         assert!(html.contains("<dl>"), "нет dl:\n{html}");
         assert!(html.contains("<dt>Термин</dt>"), "нет dt:\n{html}");

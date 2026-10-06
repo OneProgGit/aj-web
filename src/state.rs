@@ -182,8 +182,21 @@ pub fn is_forbidden(err: &str) -> bool {
     err.contains("Forbidden") || err.contains("Доступ запрещён")
 }
 
+/// Ошибка авторизации: токен протух, отозван или аккаунт удалён.
+/// Строки стабильны — их отдаёт `describe_error`, перевод один к одному.
+fn is_auth_error(err: &str) -> bool {
+    err.contains("Неверный токен") || err.contains("Invalid token")
+}
+
 /// Показать ошибку, пропустив «нет доступа».
 pub fn show_error(err: String) {
+    // После выхода/удаления аккаунта фоновые запросы, успевшие уйти до
+    // разлогина, валятся с ошибкой авторизации — это ожидаемый шум, а не
+    // новость для пользователя. Первый такой сбой уже разлогинил (см.
+    // `check` в api), повторные глушим.
+    if STATE.read().token.is_none() && is_auth_error(&err) {
+        return;
+    }
     if !is_forbidden(&err) {
         crate::alerts::show_alert(crate::alerts::AlertKind::Error, err);
     }

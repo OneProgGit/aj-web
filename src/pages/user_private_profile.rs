@@ -192,6 +192,7 @@ pub fn UserPrivateProfile(user_id: i64) -> Element {
                                             STATE.write().user = None;
                                             STATE.write().token = None;
                                             crate::state::clear_token();
+                                            crate::components::ws::unsubscribe_all_ws();
                                             nav.push(crate::Route::Welcome {});
                                         } else {
                                             nav.push(crate::Route::Users {});

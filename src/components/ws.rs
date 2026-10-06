@@ -72,6 +72,13 @@ pub fn unsubscribe_ws(key: &str) {
     WS_SUBSCRIBED.write().remove(key);
 }
 
+/// Закрывает все подписки разом — при выходе и удалении аккаунта, чтобы
+/// фоновые сокеты не продолжали ретраиться с мёртвым токеном и не сыпали
+/// ошибками авторизации поверх тоста об успешном выходе.
+pub fn unsubscribe_all_ws() {
+    WS_SUBSCRIBED.write().clear();
+}
+
 #[must_use]
 pub fn is_subscribed(key: &str) -> bool {
     WS_SUBSCRIBED.read().contains(key)

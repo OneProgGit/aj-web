@@ -75,6 +75,7 @@ pub fn Account() -> Element {
                         STATE.write().user = None;
                         STATE.write().token = None;
                         crate::state::clear_token();
+                        crate::components::ws::unsubscribe_all_ws();
                         navigator.push(crate::Route::Welcome {});
                     }
                 },
@@ -101,6 +102,7 @@ pub fn Account() -> Element {
                                     STATE.write().user = None;
                                     STATE.write().token = None;
                                     crate::state::clear_token();
+                                    crate::components::ws::unsubscribe_all_ws();
                                     show_alert(AlertKind::Info, i18n::tr(&crate::state::language(), "Аккаунт удалён", "Account deleted"));
                                     navigator.push(crate::Route::Welcome {});
                                 }

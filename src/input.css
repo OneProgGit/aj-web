@@ -182,6 +182,29 @@ button.btn {
 .md-body .md-code code { background: none; padding: 0; }
 /* Тема highlight.js ставит code независимый скролл — убиваем, скроллит общий контейнер. */
 .md-body .md-code code.hljs { display: block; overflow: visible; padding: 0; }
+/* --- Математика (KaTeX) ---
+   pulldown отдаёт `<span class="math math-inline|math-display">` с сырым TeX,
+   KaTeX заменяет содержимое на вёрстку. Выключная формула — блоком по центру,
+   с горизонтальным скроллом для широких выкладок. */
+.md-body .math-display { display: block; text-align: center; margin: 0.8em 0; overflow-x: auto; }
+.md-body .math-inline { white-space: nowrap; }
+/* KaTeX красит сам; сбрасываем только конфликт с нашим моноширинным code. */
+.md-body .katex { font-size: 1.05em; }
+
+/* --- Сноски ---
+   pulldown: `<sup class="footnote-reference"><a href="#метка">N</a></sup>`
+   внизу — `<div class="footnote-definition" id="метка">`. */
+.md-body sup.footnote-reference { font-size: 0.8em; }
+.md-body sup.footnote-reference a { text-decoration: none; }
+.md-body div.footnote-definition { font-size: 0.9em; opacity: 0.9; margin-top: 0.6em; padding-top: 0.4em; border-top: 1px solid color-mix(in oklab, currentColor 20%, transparent); }
+.md-body div.footnote-definition sup.footnote-definition-label { margin-right: 0.4em; }
+
+/* --- Definition lists ---
+   pulldown: `<dl><dt>термин</dt><dd>определение</dd></dl>`. */
+.md-body dl { margin: 0.5em 0; }
+.md-body dt { font-weight: 700; }
+.md-body dd { margin: 0.1em 0 0.4em 1.2em; }
+
 .md-body table { border-collapse: collapse; margin: 0.5em 0; display: block; overflow-x: auto; width: max-content; max-width: 100%; }
 .md-body th, .md-body td { border: 1px solid color-mix(in oklab, currentColor 20%, transparent); padding: 0.3em 0.6em; }
 .md-body hr { margin: 0.8em 0; opacity: 0.3; }

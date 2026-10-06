@@ -104,6 +104,11 @@ fn GuardLayout() -> Element {
         document::Stylesheet { href: "https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css" }
         document::Stylesheet { href: "https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css", media: "(prefers-color-scheme: dark)" }
         document::Script { src: "https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js" }
+        // KaTeX для математики `$…$` / `$$…$$`: pulldown-cmark отдаёт сырой TeX
+        // в `<span class="math …">`, рендер — вызовом katex.render из эффекта
+        // Markdown-компонента. Версия зафиксирована, как у highlight.js.
+        document::Stylesheet { href: "https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.11/katex.min.css" }
+        document::Script { src: "https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.11/katex.min.js" }
         div { class: "min-h-dvh flex flex-col",
         nav { class: "navbar bg-base-100 border-b border-base-300",
             // На мобиле два ряда: сверху логотип + переключатель языка,

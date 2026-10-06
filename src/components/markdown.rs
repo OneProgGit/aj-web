@@ -9,6 +9,16 @@ fn render_markdown(text: &str) -> String {
     opts.insert(Options::ENABLE_TABLES);
     opts.insert(Options::ENABLE_STRIKETHROUGH);
     opts.insert(Options::ENABLE_TASKLISTS);
+    // Сноски обоих видов: новые `[^метка]` и старые `[^1]` (у них разный
+    // HTML: старые нумеруются по месту определения, новые — по использованию).
+    opts.insert(Options::ENABLE_FOOTNOTES);
+    opts.insert(Options::ENABLE_OLD_FOOTNOTES);
+    // Definition lists: `термин` + строка `: определение`.
+    opts.insert(Options::ENABLE_DEFINITION_LIST);
+    // Математика `$…$` / `$$…$$`: pulldown кладёт сырой TeX в
+    // `<span class="math …">`, а рисует его KaTeX уже в браузере
+    // (см. use_effect ниже) — серверного TeX-движка нет.
+    opts.insert(Options::ENABLE_MATH);
     let parser = Parser::new_ext(text, opts);
     let mut out = String::new();
     pulldown_cmark::html::push_html(&mut out, parser);
@@ -66,9 +76,18 @@ fn render_markdown(text: &str) -> String {
     wrapped.push_str(rest);
     // data-lang для подписи языка + class для highlight.js (ammonia режет остальное).
     let mut builder = ammonia::Builder::default();
-    builder.add_generic_attributes(["data-lang", "aria-hidden", "data-hl-done"]);
-    builder.add_allowed_classes("div", ["md-codeblock", "md-codehead"]);
+    builder.add_generic_attributes(["data-lang", "aria-hidden", "data-hl-done", "data-tex-done"]);
+    builder.add_tags(&["dl", "dt", "dd", "sup", "sub", "span"]);
+    builder.add_allowed_classes(
+        "div",
+        ["md-codeblock", "md-codehead", "footnote-definition"],
+    );
     builder.add_allowed_classes("pre", ["md-gutter", "md-code"]);
+    builder.add_allowed_classes("span", ["math", "math-inline", "math-display"]);
+    builder.add_allowed_classes("sup", ["footnote-reference", "footnote-definition-label"]);
+    // id на div нужен якорям сносок (`<a href="#метка">`), иначе ссылки
+    // в никуда ведут, а обратные — не работают.
+    builder.add_tag_attributes("div", ["id"]);
     builder.add_tag_attributes("code", ["class"]);
     builder.clean(&wrapped).to_string()
 }
@@ -92,6 +111,16 @@ pub fn Markdown(text: String) -> Element {
         let done_label = i18n::tr(&lang, "скопировано", "copied");
         let _ = js_sys::eval(&format!(
             r#"(() => {{
+                // Математика: pulldown уже превратил `$…$` в спаны, поэтому
+                // ищем их напрямую, а не по разделителям. throwOnError: false —
+                // битый TeX остаётся текстом, а не роняет страницу. Флаг нужен,
+                // т.к. эффект бежит на каждый рендер, а KaTeX идемпотентен
+                // только через него: повторный рендер уже отрисованного
+                // заменяет содержимое на то же самое.
+                if (window.katex) document.querySelectorAll('.md-body span.math:not([data-tex-done])').forEach(el => {{
+                    el.setAttribute('data-tex-done', '1');
+                    try {{ katex.render(el.textContent, el, {{ displayMode: el.classList.contains('math-display'), throwOnError: false }}); }} catch (e) {{}}
+                }});
                 if (window.hljs) document.querySelectorAll('.md-body pre code:not([data-hl-done])').forEach(el => {{
                     el.setAttribute('data-hl-done', '1');
                     try {{ hljs.highlightElement(el); }} catch (e) {{}}
@@ -150,5 +179,53 @@ pub fn MdField(value: Signal<String>, label: String) -> Element {
                 oninput: move |ev| value.set(ev.value()),
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::render_markdown;
+
+    #[test]
+    fn extensions_survive_sanitizer() {
+        let html = render_markdown(
+            "Текст со сноской[^1] и старой[^старая].
+
+[^1]: Новая сноска.
+
+[^старая]: Старая сноска.
+
+Формула $x^2$ и выключная:
+
+$$\\sum_{i=1}^n i$$
+
+Термин
+: Определение
+",
+        );
+        // Сноски обоих видов: ссылки и блоки определений дошли до выхода.
+        assert!(
+            html.contains("footnote-reference"),
+            "нет ссылок сносок:\n{html}"
+        );
+        assert!(
+            html.contains("footnote-definition"),
+            "нет тел сносок:\n{html}"
+        );
+        // Математика: pulldown положил TeX в спаны, ammonia их не съела.
+        assert!(
+            html.contains("math-inline"),
+            "нет инлайн-математики:\n{html}"
+        );
+        assert!(
+            html.contains("math-display"),
+            "нет выключной математики:\n{html}"
+        );
+        // Якоря сносок живые: ammonia не вырезала href="#…".
+        assert!(html.contains("href=\"#"), "якоря сносок вырезаны:\n{html}");
+        // Definition list дошёл целиком.
+        assert!(html.contains("<dl>"), "нет dl:\n{html}");
+        assert!(html.contains("<dt>Термин</dt>"), "нет dt:\n{html}");
+        assert!(html.contains("<dd>Определение</dd>"), "нет dd:\n{html}");
     }
 }

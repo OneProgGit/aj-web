@@ -59,20 +59,54 @@ where
     if !WS_SUBSCRIBED.write().insert(key.clone()) {
         return;
     }
+    // Задача подписки — через AbortHandle: отписка должна рвать живое
+    // соединение сразу, а не ждать его естественного конца. Без этого
+    // `unsubscribe` лишь запрещал переподключение, а текущий сокет жил
+    // до обрыва со стороны сервера — после logout соединения висели.
+    let task_key = key.clone();
+    let task_key_inner = task_key.clone();
+    let (abort_handle, abort_registration) = futures_util::future::AbortHandle::new_pair();
+    let abortable = futures_util::future::Abortable::new(
+        async move {
+            while WS_SUBSCRIBED.read().contains(key.as_str()) {
+                ws_loop(&ws_url(&path), &on_event).await;
+                gloo_timers::future::TimeoutFuture::new(WS_RETRY_MS).await;
+            }
+            // Подписку снимаем только здесь: снять её может и страница, уйдя с
+            // экрана, — тогда цикл завершится на следующей проверке.
+            WS_SUBSCRIBED.write().remove(&key);
+            // Чистим и запись задачи, чтобы карта не росла (при отписке через
+            // unsubscribe_ws её уже нет — remove тогда no-op).
+            if let Ok(mut tasks) = OPEN_TASKS.lock() {
+                tasks.remove(&task_key_inner);
+            }
+        },
+        abort_registration,
+    );
+    if let Ok(mut tasks) = OPEN_TASKS.lock() {
+        tasks.insert(task_key, abort_handle);
+    }
     spawn_local(async move {
-        while WS_SUBSCRIBED.read().contains(key.as_str()) {
-            ws_loop(&ws_url(&path), &on_event).await;
-            gloo_timers::future::TimeoutFuture::new(WS_RETRY_MS).await;
-        }
-        // Подписку снимаем только здесь: снять её может и страница, уйдя с
-        // экрана, — тогда цикл завершится на следующей проверке.
-        WS_SUBSCRIBED.write().remove(&key);
+        let _ = abortable.await;
     });
 }
 
-/// Закрывает подписку: цикл переподключения увидит отсутствие ключа и выйдет.
+/// Живые задачи подписок: нужны, чтобы отписка рвала соединение сразу.
+static OPEN_TASKS: std::sync::LazyLock<Mutex<HashMap<String, futures_util::future::AbortHandle>>> =
+    std::sync::LazyLock::new(|| Mutex::new(HashMap::new()));
+
+/// Закрывает подписку и рвёт живое соединение сразу.
+///
+/// Без разрыва задачи `ws_loop` внутри ничего не знает об отписке: проверка
+/// ключа стоит снаружи, между соединениями. Поэтому раньше отписка лишь
+/// запрещала следующий переподключ, а текущий сокет оставался открыт.
 pub fn unsubscribe_ws(key: &str) {
     WS_SUBSCRIBED.write().remove(key);
+    if let Ok(mut tasks) = OPEN_TASKS.lock()
+        && let Some(handle) = tasks.remove(key)
+    {
+        handle.abort();
+    }
 }
 
 /// Метки «только что изменил сам», по лентам.

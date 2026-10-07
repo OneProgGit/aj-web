@@ -2,6 +2,9 @@
 //! учёт подписок. Разделено от обработчиков, потому что лент теперь три
 //! (контесты, задачи, пользователи), а набор событий у каждого свой.
 
+use std::collections::HashMap;
+use std::sync::Mutex;
+
 use dioxus::prelude::ReadableExt;
 use futures_util::{FutureExt, SinkExt, StreamExt};
 use gloo_net::websocket::Message;
@@ -70,6 +73,34 @@ where
 /// Закрывает подписку: цикл переподключения увидит отсутствие ключа и выйдет.
 pub fn unsubscribe_ws(key: &str) {
     WS_SUBSCRIBED.write().remove(key);
+}
+
+/// Метки «только что изменил сам», по лентам.
+///
+/// Событие, пришедшее следом за собственным изменением, — это его эхо:
+/// свой тост обработчик уже показал, а повтор из ленты — дубль. Данные при
+/// этом обновляются как обычно, глушится только уведомление. Окно в 3 секунды:
+/// чужое событие внутри него тоже замьютится, но состояние всё равно
+/// обновится — пострадает только тост, что приемлемо.
+static SELF_MUTE: std::sync::LazyLock<Mutex<HashMap<String, std::time::Instant>>> =
+    std::sync::LazyLock::new(|| Mutex::new(HashMap::new()));
+const SELF_MUTE_WINDOW: std::time::Duration = std::time::Duration::from_millis(3000);
+
+/// Отметить собственное изменение в ленте `feed` (`"users"`, `"problems"`).
+pub fn mark_self_action(feed: &str) {
+    if let Ok(mut map) = SELF_MUTE.lock() {
+        map.insert(feed.to_string(), std::time::Instant::now());
+    }
+}
+
+/// Это эхо собственного недавнего изменения?
+#[must_use]
+pub fn is_self_echo(feed: &str) -> bool {
+    SELF_MUTE
+        .lock()
+        .ok()
+        .and_then(|map| map.get(feed).copied())
+        .is_some_and(|t| t.elapsed() < SELF_MUTE_WINDOW)
 }
 
 /// Закрывает все подписки разом — при выходе и удалении аккаунта, чтобы

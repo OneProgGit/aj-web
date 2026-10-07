@@ -258,6 +258,7 @@ pub fn ProblemCard(props: ProblemCardProps) -> Element {
                                                 Ok(()) => {
                                                     picked_archive.set(None);
                                                     admin_open.set(false);
+                                                    crate::components::ws::mark_self_action("problems");
                                                     crate::alerts::show_alert(crate::alerts::AlertKind::Info, crate::i18n::tr(&crate::state::language(), "Задача обновлена", "Problem updated"));
                                                     on_changed.call(());
                                                 }
@@ -285,6 +286,7 @@ pub fn ProblemCard(props: ProblemCardProps) -> Element {
                                     Ok(()) => {
                                         deleting.set(false);
                                         admin_open.set(false);
+                                        crate::components::ws::mark_self_action("problems");
                                         crate::alerts::show_alert(crate::alerts::AlertKind::Info, crate::i18n::tr(&crate::state::language(), "Задача удалена", "Problem deleted"));
                                         on_changed.call(());
                                     }

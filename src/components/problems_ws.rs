@@ -11,7 +11,7 @@ use crate::{
     state::STATE,
 };
 
-use super::ws::subscribe_ws;
+use super::ws::{is_self_echo, subscribe_ws};
 
 /// Ключ подписки на ленту задач.
 #[must_use]
@@ -81,7 +81,9 @@ async fn handle_feed_event(event: ProblemsEvent) {
             ))
         }
     };
-    if let Some(text) = notice {
+    if let Some(text) = notice
+        && !is_self_echo("problems")
+    {
         show_alert(AlertKind::Info, text);
     }
 }

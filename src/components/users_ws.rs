@@ -12,7 +12,7 @@ use crate::{
     state::STATE,
 };
 
-use super::ws::{subscribe_ws, unsubscribe_ws};
+use super::ws::{is_self_echo, subscribe_ws, unsubscribe_ws};
 
 /// Ключ ленты всех пользователей.
 pub const USERS_FEED_KEY: &str = "users:all";
@@ -78,7 +78,11 @@ async fn handle_feed_event(event: UsersEvent) {
             ))
         }
     };
-    if let Some(text) = notice {
+    // Эхо собственного изменения (удалил/обновил сам) — тост уже показан
+    // в обработчике, повтор из ленты не нужен. Данные выше уже обновлены.
+    if let Some(text) = notice
+        && !is_self_echo("users")
+    {
         show_alert(AlertKind::Info, text);
     }
 }

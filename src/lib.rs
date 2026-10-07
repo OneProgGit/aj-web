@@ -14,6 +14,7 @@ use dioxus::router::Link;
 use crate::{
     alerts::AlertHost,
     components::users_ws::{own_profile_ws, unsubscribe_own_profile_ws},
+    models::users::UsersEvent,
     pages::{
         account_profile::Account, contest::Contest, home::Home, login::Login, problems::Problems,
         register::Register, user_private_profile::UserPrivateProfile, user_profile::UserProfile,
@@ -198,10 +199,30 @@ pub fn App() -> Element {
     fn watch_own_profile() {
         // Подписка одна на приложение (ключ "user:me"), id не нужен: сервер
         // сам понимает, чей профиль слать, по токену из query.
-        own_profile_ws(move |_event| async move {
-            // Событие приходит и тому, чей аккаунт удалили: его подписка
-            // висит, а профиль на сервере уже gone. Тогда это не «обновление»,
-            // а разлогин: чистим сессию, GuardLayout сам отбросит на Welcome.
+        own_profile_ws(move |event| async move {
+            // Удаление собственного аккаунта определяем по самому событию,
+            // а не по ошибке get_me: id свой — он ещё лежит в STATE.user.
+            // Так не зависим от формы ошибки и не делаем лишний запрос.
+            if let UsersEvent::UserDeleted(id) = event
+                && STATE.read().user.as_ref().is_some_and(|me| me.id == id)
+            {
+                STATE.write().user = None;
+                STATE.write().token = None;
+                crate::state::clear_token();
+                crate::components::ws::unsubscribe_all_ws();
+                crate::alerts::show_alert(
+                    crate::alerts::AlertKind::Info,
+                    crate::i18n::tr(
+                        &crate::state::language(),
+                        "Ваш аккаунт был удалён",
+                        "Your account was deleted",
+                    ),
+                );
+                return;
+            }
+            // Остальное — обновления: перечитываем профиль. Событие приходит
+            // и тому, чей аккаунт удалили (подписка-то висит), — если get_me
+            // вернул 404, это тоже удаление, просто событие мы пропустили.
             // Сетевую ошибку (не 404) разлогином не считаем — мало ли.
             match crate::api::users::get_me(&crate::state::token()).await {
                 Err(e) if crate::state::is_not_found(&e) => {

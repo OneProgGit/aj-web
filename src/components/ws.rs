@@ -82,14 +82,19 @@ pub fn unsubscribe_ws(key: &str) {
 /// этом обновляются как обычно, глушится только уведомление. Окно в 3 секунды:
 /// чужое событие внутри него тоже замьютится, но состояние всё равно
 /// обновится — пострадает только тост, что приемлемо.
-static SELF_MUTE: std::sync::LazyLock<Mutex<HashMap<String, std::time::Instant>>> =
+// Метки — миллисекунды `js_sys::Date::now()`, а НЕ `std::time::Instant`:
+// Instant на wasm32-unknown-unknown не реализован и паникует
+// ("time not implemented on this platform"), а непойманная паника в wasm
+// убивает инстанс целиком — вкладка виснет. Тот же приём уже используется
+// в alerts.rs для дедупликации тостов.
+static SELF_MUTE: std::sync::LazyLock<Mutex<HashMap<String, f64>>> =
     std::sync::LazyLock::new(|| Mutex::new(HashMap::new()));
-const SELF_MUTE_WINDOW: std::time::Duration = std::time::Duration::from_millis(3000);
+const SELF_MUTE_WINDOW_MS: f64 = 3000.0;
 
 /// Отметить собственное изменение в ленте `feed` (`"users"`, `"problems"`).
 pub fn mark_self_action(feed: &str) {
     if let Ok(mut map) = SELF_MUTE.lock() {
-        map.insert(feed.to_string(), std::time::Instant::now());
+        map.insert(feed.to_string(), js_sys::Date::now());
     }
 }
 
@@ -100,7 +105,7 @@ pub fn is_self_echo(feed: &str) -> bool {
         .lock()
         .ok()
         .and_then(|map| map.get(feed).copied())
-        .is_some_and(|t| t.elapsed() < SELF_MUTE_WINDOW)
+        .is_some_and(|t| js_sys::Date::now() - t < SELF_MUTE_WINDOW_MS)
 }
 
 /// Закрывает все подписки разом — при выходе и удалении аккаунта, чтобы

@@ -188,6 +188,12 @@ fn is_auth_error(err: &str) -> bool {
     err.contains("Неверный токен") || err.contains("Invalid token")
 }
 
+/// Сущности уже нет на сервере (удалена). Строки стабильны — их отдаёт
+/// `describe_error`, перевод один к одному.
+pub(crate) fn is_not_found(err: &str) -> bool {
+    err.contains("Не найдено") || err.contains("Not found")
+}
+
 /// Показать ошибку, пропустив «нет доступа».
 pub fn show_error(err: String) {
     // После выхода/удаления аккаунта фоновые запросы, успевшие уйти до

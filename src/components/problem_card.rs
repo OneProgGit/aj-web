@@ -254,11 +254,11 @@ pub fn ProblemCard(props: ProblemCardProps) -> Element {
                                     if let Some(bytes) = archive.clone() {
                                         let token = token.clone();
                                         spawn(async move {
+                                            crate::components::ws::mark_self_action("problems");
                                             match api::problems::update_problem(pid, bytes, &token).await {
                                                 Ok(()) => {
                                                     picked_archive.set(None);
                                                     admin_open.set(false);
-                                                    crate::components::ws::mark_self_action("problems");
                                                     crate::alerts::show_alert(crate::alerts::AlertKind::Info, crate::i18n::tr(&crate::state::language(), "Задача обновлена", "Problem updated"));
                                                     on_changed.call(());
                                                 }
@@ -282,11 +282,11 @@ pub fn ProblemCard(props: ProblemCardProps) -> Element {
                             let pid = problem.id;
                             let request = DeletionRequest { login, password, deletion_confirmation: confirm };
                             spawn(async move {
+                                crate::components::ws::mark_self_action("problems");
                                 match api::problems::delete_problem(pid, &request, &token).await {
                                     Ok(()) => {
                                         deleting.set(false);
                                         admin_open.set(false);
-                                        crate::components::ws::mark_self_action("problems");
                                         crate::alerts::show_alert(crate::alerts::AlertKind::Info, crate::i18n::tr(&crate::state::language(), "Задача удалена", "Problem deleted"));
                                         on_changed.call(());
                                     }

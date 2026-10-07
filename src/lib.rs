@@ -199,22 +199,43 @@ pub fn App() -> Element {
         // Подписка одна на приложение (ключ "user:me"), id не нужен: сервер
         // сам понимает, чей профиль слать, по токену из query.
         own_profile_ws(move |_event| async move {
-            if let Ok(me) = crate::api::users::get_me(&crate::state::token()).await {
-                // Тост синий: уровень сменил кто-то другой, а вкладки сейчас
-                // перерисуются — без пояснения это выглядит как глюк.
-                let lang = crate::state::language();
-                let before = STATE.read().user.as_ref().map(|u| u.admin_level.clone());
-                let changed = before.as_ref().is_some_and(|old| *old != me.admin_level);
-                STATE.write().user = Some(me);
-                if changed {
+            // Событие приходит и тому, чей аккаунт удалили: его подписка
+            // висит, а профиль на сервере уже gone. Тогда это не «обновление»,
+            // а разлогин: чистим сессию, GuardLayout сам отбросит на Welcome.
+            // Сетевую ошибку (не 404) разлогином не считаем — мало ли.
+            match crate::api::users::get_me(&crate::state::token()).await {
+                Err(e) if crate::state::is_not_found(&e) => {
+                    STATE.write().user = None;
+                    STATE.write().token = None;
+                    crate::state::clear_token();
+                    crate::components::ws::unsubscribe_all_ws();
                     crate::alerts::show_alert(
                         crate::alerts::AlertKind::Info,
                         crate::i18n::tr(
-                            &lang,
-                            "Ваш уровень доступа изменён",
-                            "Your access level changed",
+                            &crate::state::language(),
+                            "Ваш аккаунт был удалён",
+                            "Your account was deleted",
                         ),
                     );
+                }
+                Err(_) => (),
+                Ok(me) => {
+                    // Тост синий: уровень сменил кто-то другой, а вкладки сейчас
+                    // перерисуются — без пояснения это выглядит как глюк.
+                    let lang = crate::state::language();
+                    let before = STATE.read().user.as_ref().map(|u| u.admin_level.clone());
+                    let changed = before.as_ref().is_some_and(|old| *old != me.admin_level);
+                    STATE.write().user = Some(me);
+                    if changed {
+                        crate::alerts::show_alert(
+                            crate::alerts::AlertKind::Info,
+                            crate::i18n::tr(
+                                &lang,
+                                "Ваш уровень доступа изменён",
+                                "Your access level changed",
+                            ),
+                        );
+                    }
                 }
             }
         });

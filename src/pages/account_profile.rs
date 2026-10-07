@@ -97,13 +97,13 @@ pub fn Account() -> Element {
                         let request = DeletionRequest { login, password, deletion_confirmation: confirm };
                         let navigator = navigator;
                         spawn(async move {
+                            crate::components::ws::mark_self_action("users");
                             match api::users::delete_my_account(&request, &token).await {
                                 Ok(()) => {
                                     STATE.write().user = None;
                                     STATE.write().token = None;
                                     crate::state::clear_token();
                                     crate::components::ws::unsubscribe_all_ws();
-                                    crate::components::ws::mark_self_action("users");
                                     show_alert(AlertKind::Info, i18n::tr(&crate::state::language(), "Аккаунт удалён", "Account deleted"));
                                     navigator.push(crate::Route::Welcome {});
                                 }

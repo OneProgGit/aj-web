@@ -110,10 +110,10 @@ pub fn Problems() -> Element {
                             busy.set(true);
                             let token = crate::state::token();
                             spawn(async move {
+                                crate::components::ws::mark_self_action("problems");
                                 match api::problems::create_problem(bytes, &token).await {
                                     Ok(()) => {
                                         busy.set(false);
-                                        crate::components::ws::mark_self_action("problems");
                                         show_alert(AlertKind::Info, i18n::tr(&crate::state::language(), "Задача создана", "Problem created"));
                                         let all = all_problems();
                                         let res = if all {

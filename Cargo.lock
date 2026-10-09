@@ -13,9 +13,9 @@ dependencies = [
 
 [[package]]
 name = "aj-models"
-version = "0.10.13"
+version = "0.10.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c7181c10ae058e91e894985401a4e772f78566c5808c39c1f16c6c7246f2d470"
+checksum = "5447156c12925051ee77e6189075042906d1a7f608e979ebca21200e1a86e5ad"
 dependencies = [
  "chrono",
  "serde",

@@ -308,7 +308,9 @@ fn SubmissionDetail(props: SubmissionDetailProps) -> Element {
                         div { class: "bg-base-300 rounded p-4 text-base-content",
                             p { class: "font-medium", "##{i}" }
                             div { class: "flex justify-between", span { class: "text-sm", "{i18n::tr(&lang, \"вердикт\", \"verdict\")}" }, span { class: "text-sm italic font-medium border border-neutral/50 rounded px-2 py-0.5", "{crate::i18n::subgroup_verdict_text(&lang, &r.verdict)}" } }
-                            div { class: "flex justify-between", span { class: "text-sm", "{i18n::tr(&lang, \"тест\", \"test\")}" }, span { class: "text-sm italic", "{r.test}" } }
+                            if let Some(test) = r.test {
+                                div { class: "flex justify-between", span { class: "text-sm", "{i18n::tr(&lang, \"тест\", \"test\")}" }, span { class: "text-sm italic", "{test}" } }
+                            }
                             if let Some(score) = r.score {
                                 div { class: "flex justify-between", span { class: "text-sm", "{i18n::tr(&lang, \"баллы\", \"score\")}" }, span { class: "text-sm italic", "{score}" } }
                             }

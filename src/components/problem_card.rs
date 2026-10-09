@@ -173,7 +173,7 @@ pub fn ProblemCard(props: ProblemCardProps) -> Element {
                                     "✕"
                                 }
                             }
-                            label { class: "btn btn-block btn-outline btn-sm gap-1",
+                            label { class: "btn btn-block btn-outline btn-sm gap-1 relative overflow-hidden",
                             {icon_element(Icon::Upload, 16)}
                             span {
                                 {if let Some((name, _)) = picked_archive() {
@@ -185,7 +185,7 @@ pub fn ProblemCard(props: ProblemCardProps) -> Element {
                             input {
                                 r#type: "file",
                                 accept: ".zip,.tgz,.tar.gz",
-                                class: "hidden",
+                                class: "absolute inset-0 opacity-0 cursor-pointer",
                                 onchange: move |ev| {
                                     let input = ev
                                         .as_web_event()

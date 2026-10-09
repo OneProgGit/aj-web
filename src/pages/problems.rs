@@ -63,12 +63,12 @@ pub fn Problems() -> Element {
             div { class: "flex flex-wrap gap-4 items-center",
                 h1 { class: "text-2xl font-bold", "{i18n::tr(&lang, \"Задачи\", \"Problems\")}" }
 
-                label { class: "btn btn-ghost btn-sm gap-1",
+                label { class: "btn btn-ghost btn-sm gap-1 relative overflow-hidden",
                     {icon_element(if picked().is_some() { Icon::Pencil } else { Icon::Upload }, 16)}
                     span { "{pick_label}" }
                     input {
                         r#type: "file",
-                        class: "hidden",
+                        class: "absolute inset-0 opacity-0 cursor-pointer",
                         onchange: move |ev| {
                             let input = ev
                                 .as_web_event()

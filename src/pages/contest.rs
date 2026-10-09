@@ -379,17 +379,12 @@ pub fn Contest(contest_id: i64) -> Element {
                             span { "{paste_mode_label}" }
                         }
                         if !paste_mode() {
-                            label {
-                                r#for: "solution-file",
-                                class: "btn btn-ghost btn-sm gap-1",
+                            label { class: "btn btn-ghost btn-sm gap-1 relative overflow-hidden",
                                 {icon_element(Icon::Upload, 16)}
                                 span { "{pick_label}" }
-                            }
-                        }
-                        input {
-                            id: "solution-file",
-                            r#type: "file",
-                            class: "hidden",
+                                input {
+                                    r#type: "file",
+                                    class: "absolute inset-0 opacity-0 cursor-pointer",
                             onchange: move |ev| {
                                 let input = ev
                                     .as_web_event()
@@ -417,6 +412,8 @@ pub fn Contest(contest_id: i64) -> Element {
                                     input.set_value("");
                                 }
                             },
+                            }
+                        }
                         }
 
                         if paste_mode() {

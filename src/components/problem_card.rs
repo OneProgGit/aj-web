@@ -106,6 +106,7 @@ pub fn ProblemCard(props: ProblemCardProps) -> Element {
     let mut admin_open = use_signal(|| false);
     let mut deleting = use_signal(|| false);
     let mut picked_archive = use_signal(|| None::<(String, Vec<u8>)>);
+    let mut updating = use_signal(|| false);
 
     let name = if lang == "en" && !problem.name_en.is_empty() {
         problem.name_en.clone()
@@ -245,14 +246,20 @@ pub fn ProblemCard(props: ProblemCardProps) -> Element {
                             }
                             button {
                             class: "btn btn-primary btn-sm gap-1",
-                            disabled: picked_archive().is_none(),
+                            // Гасим на время заливки: повторный клик дал бы два
+                            // конкурирующих update-запроса.
+                            disabled: picked_archive().is_none() || updating(),
                             onclick: {
                                 let archive = picked_archive().map(|(_, b)| b);
                                 let token = STATE.read().token.clone();
                                 let pid = problem.id;
                                 move |_| {
+                                    if updating() {
+                                        return;
+                                    }
                                     if let Some(bytes) = archive.clone() {
                                         let token = token.clone();
+                                        updating.set(true);
                                         spawn(async move {
                                             crate::components::ws::mark_self_action("problems");
                                             match api::problems::update_problem(pid, bytes, &token).await {
@@ -264,11 +271,20 @@ pub fn ProblemCard(props: ProblemCardProps) -> Element {
                                                 }
                                                 Err(e) => crate::alerts::show_alert(crate::alerts::AlertKind::Error, e),
                                             }
+                                            // Сбрасываем в обеих ветках: иначе при ошибке
+                                            // кнопка останется задизейбленной со спиннером.
+                                            updating.set(false);
                                         });
                                     }
                                 }
                             },
-                            {icon_element(Icon::Pencil, 16)}
+                            // Пока архив заливается — спиннер вместо иконки,
+                            // как в кнопке создания задачи.
+                            if updating() {
+                                span { class: "loading loading-spinner loading-xs" }
+                            } else {
+                                {icon_element(Icon::Pencil, 16)}
+                            }
                             span { "{i18n::tr(&lang, \"изменить\", \"edit\")}" }
                             }
                         }

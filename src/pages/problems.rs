@@ -133,7 +133,14 @@ pub fn Problems() -> Element {
                             });
                         }
                     },
-                    {icon_element(if picked().is_none() { Icon::CircleBackslash } else { Icon::Plus }, 16)}
+                    // Пока архив заливается, вместо иконки — спиннер прямо
+                    // в кнопке: список при этом не трогаем, он обновится сам
+                    // после успеха (плюс придёт событие ленты).
+                    if busy() {
+                        span { class: "loading loading-spinner loading-xs" }
+                    } else {
+                        {icon_element(if picked().is_none() { Icon::CircleBackslash } else { Icon::Plus }, 16)}
+                    }
                     span { "{i18n::tr(&lang, \"создать\", \"create\")}" }
                 }
             }

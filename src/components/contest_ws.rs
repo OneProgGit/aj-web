@@ -218,13 +218,15 @@ pub fn contest_key(contest_id: i64) -> String {
 /// Подписка списка контестов: все (`/contests/ws`) или свои (`/contests/my/ws`).
 /// Обрабатывает только членство списка (создание/обновление/удаление),
 /// чтобы не спамить тостами постов чужих контестов.
-pub fn contests_feed_ws(mine: bool) {
-    let (key, path) = if mine {
-        ("contests:my".to_string(), "/contests/my/ws")
-    } else {
-        ("contests:all".to_string(), "/contests/ws")
-    };
-    subscribe_ws(key, path.to_string(), handle_feed_event);
+pub fn contests_feed_ws() {
+    // Отдельного `/contests/my/ws` на бэкенде НЕТ — только `/contests/ws`
+    // (иначе — бесконечный цикл `WebSocket connection failed` + ретрай).
+    // `refresh_contest` чужое молча игнорирует.
+    subscribe_ws(
+        "contests:all".to_string(),
+        "/contests/ws".to_string(),
+        handle_feed_event,
+    );
 }
 
 async fn handle_feed_event(event: ContestsEvent) {

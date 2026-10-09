@@ -40,7 +40,7 @@ pub fn Problems() -> Element {
             match res {
                 Ok(list) => {
                     STATE.write().problems = list;
-                    problems_feed_ws(all);
+                    problems_feed_ws();
                 }
                 Err(e) => show_alert(AlertKind::Error, e),
             }
@@ -163,7 +163,7 @@ pub fn Problems() -> Element {
                                 match res {
                                     Ok(list) => {
                                         STATE.write().problems = list;
-                                        problems_feed_ws(new_value);
+                                        problems_feed_ws();
                                     }
                                     Err(e) => show_alert(AlertKind::Error, e),
                                 }

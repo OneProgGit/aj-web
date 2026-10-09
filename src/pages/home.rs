@@ -27,7 +27,7 @@ async fn reload_data(
         match api::contests::get_contests(&token).await {
             Ok(list) => {
                 STATE.write().contests = list;
-                contests_feed_ws(false);
+                contests_feed_ws();
             }
             Err(e) => show_alert(AlertKind::Error, e),
         }
@@ -36,7 +36,7 @@ async fn reload_data(
         match api::contests::get_my_contests(&token).await {
             Ok(list) => {
                 STATE.write().contests = list;
-                contests_feed_ws(true);
+                contests_feed_ws();
             }
             Err(e) => show_alert(AlertKind::Error, e),
         }

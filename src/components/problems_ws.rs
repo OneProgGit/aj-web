@@ -1,4 +1,4 @@
-//! Лента задач: `/problems/ws` (все) и `/problems/my/ws` (свои).
+//! Лента задач: `/problems/ws` (общая; отдельного `/problems/my/ws` нет).
 //!
 //! По канонам ленты контестов: событие молча обновляет список, без тостов —
 //! иначе чужая правка задачи засветилась бы каждому. Исключение: скрытая
@@ -12,16 +12,6 @@ use crate::{
 };
 
 use super::ws::{is_self_echo, subscribe_ws};
-
-/// Ключ подписки на ленту задач.
-#[must_use]
-pub fn problems_feed_key(mine: bool) -> String {
-    if mine {
-        "problems:my".to_string()
-    } else {
-        "problems:all".to_string()
-    }
-}
 
 /// Полный GET задачи. Возвращает `false`, если задача нам недоступна.
 async fn refresh_problem(id: i64) -> bool {
@@ -90,11 +80,18 @@ async fn handle_feed_event(event: ProblemsEvent) {
 
 /// Открывает ленту задач. Безопасно вызывать из рендера: повторный вызов
 /// с тем же ключом ничего не делает.
-pub fn problems_feed_ws(mine: bool) {
-    let path = if mine {
-        "/problems/my/ws"
-    } else {
-        "/problems/ws"
-    };
-    subscribe_ws(problems_feed_key(mine), path.to_string(), handle_feed_event);
+///
+/// Внимание: отдельного `/problems/my/ws` на бэкенде НЕТ (проверено по
+/// роутам ada-judge — есть только `/problems/ws`), поэтому оба режима
+/// подписаны на общую ленту. Подписка на несуществующий путь давала
+/// бесконечный цикл `WebSocket connection failed` + ретрай каждые 2 секунды.
+/// Параметр `mine` оставлен для совместимости: если роут появится, вернуть
+/// выбор пути — одна строка. Тумблер при этом всё равно owner-only, а
+/// `refresh_problem` недоступное молча игнорирует.
+pub fn problems_feed_ws() {
+    subscribe_ws(
+        "problems:all".to_string(),
+        "/problems/ws".to_string(),
+        handle_feed_event,
+    );
 }

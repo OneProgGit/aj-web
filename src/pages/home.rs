@@ -15,13 +15,12 @@ use crate::{
     state::{ContestStatus, STATE, contest_status},
 };
 
-/// Loads account/contest/problem/user data, mirroring aj-app's `load_all`.
-async fn reload_data(
-    all_contests: bool,
-    force_contests: bool,
-    force_problems: bool,
-    force_users: bool,
-) {
+/// Loads contest/user data, mirroring aj-app's `load_all`.
+///
+/// Задачи здесь не грузим: главная их всё равно не рисует (список живёт на
+/// `Route::Problems`, где данные тянет сама страница), а `GET /problems`
+/// отдаётся только владельцу — запрос от обычного админа возвращал 403.
+async fn reload_data(all_contests: bool, force_contests: bool, force_users: bool) {
     let token = crate::state::token();
     if all_contests && force_contests {
         match api::contests::get_contests(&token).await {
@@ -29,7 +28,7 @@ async fn reload_data(
                 STATE.write().contests = list;
                 contests_feed_ws();
             }
-            Err(e) => show_alert(AlertKind::Error, e),
+            Err(e) => crate::state::show_error(e),
         }
     }
     if !all_contests && force_contests {
@@ -38,22 +37,13 @@ async fn reload_data(
                 STATE.write().contests = list;
                 contests_feed_ws();
             }
-            Err(e) => show_alert(AlertKind::Error, e),
-        }
-    }
-    if force_problems {
-        let is_admin = STATE.read().is_admin();
-        if is_admin {
-            match api::problems::get_all_problems(&token).await {
-                Ok(list) => STATE.write().problems = list,
-                Err(e) => show_alert(AlertKind::Error, e),
-            }
+            Err(e) => crate::state::show_error(e),
         }
     }
     if force_users && STATE.read().is_owner() {
         match api::users::get_all_users(&token).await {
             Ok(list) => STATE.write().users = list,
-            Err(e) => show_alert(AlertKind::Error, e),
+            Err(e) => crate::state::show_error(e),
         }
     }
 }
@@ -73,7 +63,7 @@ pub fn Home() -> Element {
         loading.set(true);
         spawn(async move {
             let all = STATE.read().contests_is_all;
-            reload_data(all, true, true, true).await;
+            reload_data(all, true, true).await;
             loading.set(false);
         });
     }
@@ -191,7 +181,7 @@ pub fn Home() -> Element {
                             on_changed: move |_| {
                                 let all = STATE.read().contests_is_all;
                                 spawn(async move {
-                                    reload_data(all, true, false, false).await;
+                                    reload_data(all, true, false).await;
                                 });
                             },
                         }

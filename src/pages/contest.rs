@@ -221,7 +221,8 @@ pub fn Contest(contest_id: i64) -> Element {
     let lang = crate::state::language();
     let navigator = use_navigator();
     let selected_problem = use_signal(|| 0usize);
-    let mut language_idx = use_signal(|| 0usize);
+    // Язык посылок помним между перезагрузками, как и язык интерфейса.
+    let mut language_idx = use_signal(crate::state::load_submit_language);
     let mut solution_bytes = use_signal(|| None::<Vec<u8>>);
     let mut solution_name = use_signal(String::new);
     let mut paste_mode = use_signal(|| false);
@@ -362,7 +363,9 @@ pub fn Contest(contest_id: i64) -> Element {
                             class: "select select-bordered select-sm",
                             value: language_idx().to_string(),
                             onchange: move |ev| {
-                                language_idx.set(ev.value().parse::<usize>().unwrap_or(0));
+                                let idx = ev.value().parse::<usize>().unwrap_or(0);
+                                language_idx.set(idx);
+                                crate::state::save_submit_language(idx);
                             },
                             option { value: "0", "Rust" }
                             option { value: "1", "C" }

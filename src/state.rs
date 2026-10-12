@@ -239,6 +239,29 @@ pub fn save_language(lang: &str) {
     let _ = storage.set_item(LANG_KEY, lang);
 }
 
+const SUBMIT_LANG_KEY: &str = "aj_web_submit_lang";
+
+/// Запомнить язык посылок (индекс из селекта), чтобы следующие посылки
+/// уходили с тем же языком, как интерфейс помнит свой через LANG_KEY.
+pub fn save_submit_language(idx: usize) {
+    let window = web_sys::window();
+    let Some(storage) = window.and_then(|w| w.local_storage().ok().flatten()) else {
+        return;
+    };
+    let _ = storage.set_item(SUBMIT_LANG_KEY, &idx.to_string());
+}
+
+#[must_use]
+pub fn load_submit_language() -> usize {
+    let window = web_sys::window();
+    window
+        .and_then(|w| w.local_storage().ok().flatten())
+        .and_then(|storage| storage.get_item(SUBMIT_LANG_KEY).ok().flatten())
+        .and_then(|v| v.parse::<usize>().ok())
+        .filter(|v| *v <= 5)
+        .unwrap_or(0)
+}
+
 pub fn load_language() -> String {
     let window = web_sys::window();
     window

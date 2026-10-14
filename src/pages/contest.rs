@@ -697,15 +697,16 @@ pub fn Contest(contest_id: i64) -> Element {
                                 });
                             },
                         }
+                        // Строка управления задачами рендерится всегда, даже
+                        // когда задач нет, — поэтому кнопка добавления видна и
+                        // в пустом контесте. Отдельной строкой её быть не
+                        // должно: общий контейнер это grid на две колонки,
+                        // и лишний div встал бы третьей ячейкой.
                         div { class: "flex flex-wrap gap-4 items-center",
                             {problem_selector(problems.clone(), selected_problem, switching)}
                             {retest_button(selected.clone(), busy)}
+                            {add_problem_button(contest.clone(), problems.clone())}
                         }
-                    }
-                    // Отдельной строкой и без условия выбранной задачи: добавить
-                    // первую задачу в пустой контест тоже надо.
-                    div { class: "flex flex-wrap gap-4 items-center",
-                        {add_problem_button(contest.clone(), problems.clone())}
                     }
                     if let Some(problem) = &selected {
                         div { class: "flex flex-col gap-4 min-h-0 min-w-0",

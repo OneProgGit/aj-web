@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use dioxus::prelude::*;
 use dioxus_web::WebEventExt;
 use wasm_bindgen::JsCast;
@@ -84,6 +86,11 @@ pub struct ProblemCardProps {
     pub show_id: bool,
     pub on_changed: EventHandler<()>,
     pub subgroups_scroll: bool,
+    /// Название контеста по его id. `None` — показывать нечего: внутри
+    /// контеста он и так известен, а на общем списке задач подсказывает,
+    /// где задача живёт. Название берём отсюда, а не из глобального состояния,
+    /// чтобы карточка не зависела от того, что кто-то уже загрузил.
+    pub contest_titles: Option<HashMap<i64, String>>,
 }
 
 impl PartialEq for ProblemCardProps {
@@ -101,6 +108,7 @@ pub fn ProblemCard(props: ProblemCardProps) -> Element {
         show_id,
         on_changed,
         subgroups_scroll,
+        contest_titles,
     } = props;
     let lang = crate::state::language();
     let can_manage = STATE.read().can_manage_problem(&problem);
@@ -141,6 +149,26 @@ pub fn ProblemCard(props: ProblemCardProps) -> Element {
                             },
                             {icon_element(Icon::Gear, 14)}
                             span { "{i18n::tr(&lang, \"админ.\", \"admin\")}" }
+                        }
+                    }
+                }
+
+                if let Some(titles) = &contest_titles {
+                    // Сначала id, потом название: в общем списке задач контекст
+                    // обычно известен по названию, а id нужен, чтобы различить
+                    // одноимённые контесты.
+                    div { class: "flex items-center gap-2 text-sm opacity-70",
+                        Link {
+                            to: "/contest/{problem.contest_id}",
+                            class: "badge badge-sm badge-ghost link link-hover font-mono",
+                            "#{problem.contest_id}",
+                        }
+                        if let Some(title) = titles.get(&problem.contest_id) {
+                            Link {
+                                to: "/contest/{problem.contest_id}",
+                                class: "link link-hover",
+                                "{title}",
+                            }
                         }
                     }
                 }

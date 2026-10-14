@@ -714,6 +714,8 @@ pub fn Contest(contest_id: i64) -> Element {
                                 problem: problem.clone(),
                                 show_id: false,
                                 subgroups_scroll: true,
+                                // Внутри контеста подпись не нужна: мы и так в нём.
+                                contest_titles: None,
                                 on_changed: move |_| {},
                             }
                         }

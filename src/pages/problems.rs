@@ -109,23 +109,13 @@ pub fn Problems() -> Element {
             } else {
                 div { class: "flex flex-col gap-4 w-full max-h-[32rem] overflow-y-auto",
                     for p in STATE.read().problems.iter() {
-                        div { class: "flex flex-col gap-1",
-                            // Задача принадлежит контесту, но на списке это не
-                            // видно — показываем имя и id ссылкой на него.
-                            div { class: "flex items-center gap-2 px-1 text-sm opacity-70",
-                                Link {
-                                    to: "/contest/{p.contest_id}",
-                                    class: "link link-hover",
-                                    "{contest_names().get(&p.contest_id).cloned().unwrap_or_else(|| i18n::tr(&lang, \"контест\", \"contest\"))}",
-                                }
-                                span { class: "badge badge-sm badge-ghost", "#{p.contest_id}" }
-                            }
-                            ProblemCard {
-                                problem: p.clone(),
-                                show_id: true,
-                                subgroups_scroll: true,
-                                on_changed: move |_| {},
-                            }
+                        // Контест теперь подписан прямо в карточке задачи.
+                        ProblemCard {
+                            problem: p.clone(),
+                            show_id: true,
+                            subgroups_scroll: true,
+                            contest_titles: Some(contest_names()),
+                            on_changed: move |_| {},
                         }
                     }
                 }

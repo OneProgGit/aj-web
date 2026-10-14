@@ -147,6 +147,16 @@ pub fn is_self_echo(feed: &str) -> bool {
 /// ошибками авторизации поверх тоста об успешном выходе.
 pub fn unsubscribe_all_ws() {
     WS_SUBSCRIBED.write().clear();
+    // Ключей мало: без abort задачи из `OPEN_TASKS` продолжали жить, а
+    // `ws_loop` о подписке ничего не знает — он крутится внутри, и проверка
+    // стоит только между соединениями. Значит после logout сокеты оставались
+    // открытыми и продолжали слать события: уведомления приходили уже
+    // неавторизованному пользователю.
+    if let Ok(mut tasks) = OPEN_TASKS.lock() {
+        for (_, handle) in tasks.drain() {
+            handle.abort();
+        }
+    }
 }
 
 #[must_use]

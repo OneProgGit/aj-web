@@ -116,3 +116,9 @@ so it resets on reload while the tab is restored.
 - `cargo clippy --all-targets` is expected to be clean; note that
   `cargo clippy --fix` will happily delete helpers it considers unused
   (e.g. `state::show_error`) if their call sites are temporarily gone.
+
+## Further reading
+
+[docs/development.md](docs/development.md) — architecture, backend contracts
+(problem creation and the required 0-based `problem_index`), WebSocket feeds,
+Markdown features, and the gotchas collected the hard way.

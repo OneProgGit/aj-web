@@ -153,26 +153,6 @@ pub fn ProblemCard(props: ProblemCardProps) -> Element {
                     }
                 }
 
-                if let Some(titles) = &contest_titles {
-                    // Сначала id, потом название: в общем списке задач контекст
-                    // обычно известен по названию, а id нужен, чтобы различить
-                    // одноимённые контесты.
-                    div { class: "flex items-center gap-2 text-sm opacity-70",
-                        Link {
-                            to: "/contest/{problem.contest_id}",
-                            class: "badge badge-sm badge-ghost link link-hover font-mono",
-                            "#{problem.contest_id}",
-                        }
-                        if let Some(title) = titles.get(&problem.contest_id) {
-                            Link {
-                                to: "/contest/{problem.contest_id}",
-                                class: "link link-hover",
-                                "{title}",
-                            }
-                        }
-                    }
-                }
-
                 if matches!(problem.r#type, ProblemType::Interactive) {
                     p { class: "font-bold", "{i18n::tr(&lang, \"Это интерактивная задача.\", \"This is an interactive problem.\")}" }
                 }
@@ -181,6 +161,21 @@ pub fn ProblemCard(props: ProblemCardProps) -> Element {
                 }
                 if matches!(problem.r#type, ProblemType::RunTwiceFirstInteractive | ProblemType::RunTwiceSecondInteractive) {
                     p { class: "font-bold", "{i18n::tr(&lang, \"Это интерактивная задача с двойным запуском.\", \"This is an interactive problem run twice.\")}" }
+                }
+
+                if let Some(titles) = &contest_titles {
+                    div { class: "flex justify-between",
+                        span { class: "text-sm", "{i18n::tr(&lang, \"контест\", \"contest\")}" }
+                        // Одной строкой «#id название»: на списке задач по
+                        // названию контест не всегда опознаётся, а id
+                        // отличает одноимённые.
+                        span { class: "text-sm italic text-right",
+                            {match titles.get(&problem.contest_id) {
+                                Some(title) => format!("#{} {title}", problem.contest_id),
+                                None => format!("#{}", problem.contest_id),
+                            }}
+                        }
+                    }
                 }
 
                 div { class: "flex justify-between",

@@ -251,12 +251,19 @@ pub fn ProblemCard(props: ProblemCardProps) -> Element {
                                     }
                                 },
                             }
-                            ProblemNumber { number, min: 1, disabled: updating() }
                         }
+                        // Вне label'а пикера: label тут — это кнопка
+                        // btn-block с overflow-hidden, и степпер внутри неё
+                        // оказывался поверх текста «выбрать архив».
+                        ProblemNumber { number, min: 1, disabled: updating() }
                         div { class: "card-actions justify-end mt-2",
                             button {
                                 class: "btn btn-ghost btn-sm gap-1",
-                                onclick: move |_| { picked_archive.set(None); admin_open.set(false); },
+                                onclick: move |_| {
+                                    picked_archive.set(None);
+                                    number.set(problem.index + 1);
+                                    admin_open.set(false);
+                                },
                                 span { "{i18n::tr(&lang, \"отменить\", \"cancel\")}" }
                             }
                             button {

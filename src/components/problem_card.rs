@@ -169,7 +169,9 @@ pub fn ProblemCard(props: ProblemCardProps) -> Element {
                         // Одной строкой «#id название»: на списке задач по
                         // названию контест не всегда опознаётся, а id
                         // отличает одноимённые.
-                        span { class: "text-sm italic text-right",
+                        Link {
+                            to: "/contest/{problem.contest_id}",
+                            class: "text-sm italic text-right link link-hover",
                             {match titles.get(&problem.contest_id) {
                                 Some(title) => format!("#{} {title}", problem.contest_id),
                                 None => format!("#{}", problem.contest_id),

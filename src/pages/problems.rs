@@ -109,13 +109,20 @@ pub fn Problems() -> Element {
             } else {
                 div { class: "flex flex-col gap-4 w-full max-h-[32rem] overflow-y-auto",
                     for p in STATE.read().problems.iter() {
-                        // Контест теперь подписан прямо в карточке задачи.
-                        ProblemCard {
-                            problem: p.clone(),
-                            show_id: true,
-                            subgroups_scroll: true,
-                            contest_titles: Some(contest_names()),
-                            on_changed: move |_| {},
+                        // Обёртка нужна из-за flex-1 у корня карточки: внутри
+                        // flex-колонки с ограниченной высотой карточки
+                        // становились flex-элементами с basis 0 и min-height 0
+                        // и при большом списке схлопывались до нуля. Обёртка
+                        // сжиматься не даёт, поэтому высоту задаёт содержимое,
+                        // а прокручивает внешний контейнер.
+                        div { class: "shrink-0",
+                            ProblemCard {
+                                problem: p.clone(),
+                                show_id: true,
+                                subgroups_scroll: true,
+                                contest_titles: Some(contest_names()),
+                                on_changed: move |_| {},
+                            }
                         }
                     }
                 }

@@ -10,10 +10,11 @@ use crate::{
         icon::{Icon, icon_element},
         loading::Loading,
         problem_card::ProblemCard,
+        problem_number::{ProblemNumber, problem_index_zero_based},
         submissions::Submissions,
     },
     i18n,
-    models::{problems::PublicProblemConfig, testing::Language},
+    models::{contests::PublicContestConfig, problems::PublicProblemConfig, testing::Language},
     pages::{
         contest_announcements::ContestAnnouncements, contest_leaderboard::ContestLeaderboard,
         contest_questions::ContestQuestions,
@@ -104,6 +105,171 @@ fn problem_selector(
                     value: "{i}",
                     selected: selected_problem() == i,
                     "#{p.index + 1} {i18n::problem_title(&crate::state::language(), &p.name_ru, &p.name_en)}"
+                }
+            }
+        }
+    }
+}
+
+/// Кнопка «добавить задачу» с модалкой создания. Только для тех, кто может
+/// управлять контестом; остальным возвращаем пустой элемент.
+///
+/// Отдельного эндпоинта «создать задачу вне контеста» на сервере нет, поэтому
+/// создание живёт здесь: номер в контесте задаётся степпером, а в запрос уходит
+/// 0-based.
+fn add_problem_button(contest: PublicContestConfig, problems: Vec<PublicProblemConfig>) -> Element {
+    let lang = crate::state::language();
+    let mut open = use_signal(|| false);
+    let mut archive = use_signal(|| None::<(String, Vec<u8>)>);
+    let mut number = use_signal(|| 1i64);
+    let mut busy = use_signal(|| false);
+
+    // Дефолт — сразу за последней задачей контеста (в UI номер 1-based).
+    let next_number = problems.iter().map(|p| p.index).max().unwrap_or(-1) + 2;
+    if !STATE.read().can_manage_contest(&contest) {
+        return rsx! {};
+    }
+    let contest_id = contest.id;
+
+    rsx! {
+        button {
+            class: "btn btn-ghost btn-sm gap-1",
+            onclick: move |_| {
+                open.set(true);
+                number.set(next_number);
+            },
+            {icon_element(Icon::Plus, 16)}
+            span { "{i18n::tr(&lang, \"добавить задачу\", \"add problem\")}" }
+        }
+
+        if open() {
+            div { class: "modal modal-open",
+                div { class: "modal-box max-w-2xl flex flex-col gap-3",
+                    div { class: "flex justify-between items-center",
+                        span { class: "text-lg font-bold", "{i18n::tr(&lang, \"Новая задача\", \"New problem\")}" }
+                        button {
+                            class: "btn btn-sm btn-circle btn-ghost",
+                            onclick: move |_| {
+                                open.set(false);
+                                archive.set(None);
+                                busy.set(false);
+                            },
+                            "✕"
+                        }
+                    }
+                    label { class: "btn btn-block btn-outline btn-sm gap-1 relative overflow-hidden",
+                        {icon_element(Icon::Upload, 16)}
+                        span {
+                            {if let Some((name, _)) = archive() {
+                                format!(
+                                    "{} ({})",
+                                    i18n::tr(&lang, "выбрать архив", "pick archive"),
+                                    name
+                                )
+                            } else {
+                                i18n::tr(&lang, "выбрать архив", "pick archive")
+                            }}
+                        }
+                        input {
+                            r#type: "file",
+                            accept: ".zip,.tgz,.tar.gz",
+                            class: "absolute inset-0 opacity-0 cursor-pointer",
+                            onchange: move |ev| {
+                                let input = ev
+                                    .as_web_event()
+                                    .target()
+                                    .and_then(|t| t.dyn_into::<web_sys::HtmlInputElement>().ok());
+                                let file = input
+                                    .as_ref()
+                                    .and_then(|el| el.files())
+                                    .and_then(|f| f.item(0));
+                                if let Some(file) = file {
+                                    let name = file.name();
+                                    spawn(async move {
+                                        let buffer =
+                                            wasm_bindgen_futures::JsFuture::from(file.array_buffer()).await;
+                                        match buffer {
+                                            Ok(b) => {
+                                                let view = js_sys::Uint8Array::new(&b);
+                                                archive.set(Some((name, view.to_vec())));
+                                            }
+                                            // Как и в других местах, язык берём заново:
+                                            // иначе замыкание уносит его в spawn.
+                                            Err(_) => show_alert(
+                                                AlertKind::Error,
+                                                i18n::tr(
+                                                    &crate::state::language(),
+                                                    "Не удалось прочитать файл",
+                                                    "Could not read file",
+                                                ),
+                                            ),
+                                        }
+                                    });
+                                }
+                                if let Some(input) = input {
+                                    input.set_value("");
+                                }
+                            },
+                        }
+                    }
+                    ProblemNumber { number, min: 1, disabled: busy() }
+                    div { class: "card-actions justify-end mt-2",
+                        button {
+                            class: "btn btn-ghost btn-sm",
+                            onclick: move |_| {
+                                open.set(false);
+                                archive.set(None);
+                                busy.set(false);
+                            },
+                            "{i18n::tr(&lang, \"отмена\", \"cancel\")}"
+                        }
+                        button {
+                            class: "btn btn-primary btn-sm gap-1",
+                            disabled: archive().is_none() || busy(),
+                            onclick: {
+                                let token = STATE.read().token.clone();
+                                move |_| {
+                                    let Some((_, bytes)) = archive().clone() else { return; };
+                                    if busy() {
+                                        return;
+                                    }
+                                    busy.set(true);
+                                    let problem_index = problem_index_zero_based(number());
+                                    let token = token.clone();
+                                    let spawn_lang = lang.clone();
+                                    spawn(async move {
+                                        crate::components::ws::mark_self_action("problems");
+                                        let res = api::problems::create_contest_problem(
+                                            contest_id, problem_index, bytes, &token,
+                                        ).await;
+                                        busy.set(false);
+                                        match res {
+                                            Ok(()) => {
+                                                show_alert(
+                                                    AlertKind::Info,
+                                                    i18n::tr(
+                                                        &spawn_lang,
+                                                        "Задача создана",
+                                                        "Problem created",
+                                                    ),
+                                                );
+                                                open.set(false);
+                                                archive.set(None);
+                                                load_contest_state(contest_id, 0, false, true).await;
+                                            }
+                                            Err(e) => show_alert(AlertKind::Error, e),
+                                        }
+                                    });
+                                }
+                            },
+                            if busy() {
+                                span { class: "loading loading-spinner loading-xs" }
+                            } else {
+                                {icon_element(Icon::Plus, 16)}
+                            }
+                            span { "{i18n::tr(&lang, \"создать\", \"create\")}" }
+                        }
+                    }
                 }
             }
         }
@@ -535,6 +701,11 @@ pub fn Contest(contest_id: i64) -> Element {
                             {problem_selector(problems.clone(), selected_problem, switching)}
                             {retest_button(selected.clone(), busy)}
                         }
+                    }
+                    // Отдельной строкой и без условия выбранной задачи: добавить
+                    // первую задачу в пустой контест тоже надо.
+                    div { class: "flex flex-wrap gap-4 items-center",
+                        {add_problem_button(contest.clone(), problems.clone())}
                     }
                     if let Some(problem) = &selected {
                         div { class: "flex flex-col gap-4 min-h-0 min-w-0",

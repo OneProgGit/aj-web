@@ -14,6 +14,7 @@ pub mod markdown;
 pub mod password_field;
 pub mod post_card;
 pub mod problem_card;
+pub mod problem_number;
 pub mod problems_ws;
 pub mod question_card;
 pub mod submissions;

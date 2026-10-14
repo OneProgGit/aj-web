@@ -31,13 +31,32 @@ pub async fn get_all_problems(
     api::get("/problems", token).await
 }
 
-pub async fn create_problem(archive_bytes: Vec<u8>, token: &Option<String>) -> Result<(), String> {
-    let form = reqwest::multipart::Form::new().part(
-        "problem_archive",
-        reqwest::multipart::Part::bytes(archive_bytes),
-    );
+/// Создание задачи внутри контеста.
+///
+/// `problem_index` на проводе 0-based, поэтому вызывающий код отдаёт уже
+/// пересчитанное значение (номер в UI минус один) — см. `problem_index_zero_based`.
+/// Сервер требует оба поля, и маршрут именно такой:
+/// `POST /contests/{contest_id}/problems/new`.
+pub async fn create_contest_problem(
+    contest_id: i64,
+    problem_index: i64,
+    archive_bytes: Vec<u8>,
+    token: &Option<String>,
+) -> Result<(), String> {
+    let form = reqwest::multipart::Form::new()
+        .part(
+            "problem_index",
+            reqwest::multipart::Part::text(problem_index.to_string()),
+        )
+        .part(
+            "problem_archive",
+            reqwest::multipart::Part::bytes(archive_bytes),
+        );
     let mut req = api::client(token)
-        .post(format!("{}/problems/new", api::api_base()))
+        .post(format!(
+            "{}/contests/{contest_id}/problems/new",
+            api::api_base()
+        ))
         .multipart(form);
     if let Some(auth) = api::auth_header(token) {
         req = req.header("Authorization", auth);
@@ -61,15 +80,23 @@ pub async fn create_problem(archive_bytes: Vec<u8>, token: &Option<String>) -> R
     }
 }
 
+/// Обновление задачи. Как и при создании, `problem_index` — 0-based и
+/// обязателен: сервер без него отдаёт BadRequest.
 pub async fn update_problem(
     problem_id: i64,
+    problem_index: i64,
     archive_bytes: Vec<u8>,
     token: &Option<String>,
 ) -> Result<(), String> {
-    let form = reqwest::multipart::Form::new().part(
-        "problem_archive",
-        reqwest::multipart::Part::bytes(archive_bytes),
-    );
+    let form = reqwest::multipart::Form::new()
+        .part(
+            "problem_index",
+            reqwest::multipart::Part::text(problem_index.to_string()),
+        )
+        .part(
+            "problem_archive",
+            reqwest::multipart::Part::bytes(archive_bytes),
+        );
     let mut req = api::client(token)
         .patch(format!("{}/problems/{problem_id}/update", api::api_base()))
         .multipart(form);

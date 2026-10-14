@@ -1,16 +1,11 @@
+use std::collections::HashMap;
+
 use dioxus::prelude::*;
-use dioxus_web::WebEventExt;
-use wasm_bindgen::JsCast;
 
 use crate::{
     alerts::{AlertKind, show_alert},
     api,
-    components::{
-        icon::{Icon, icon_element},
-        loading::Loading,
-        problem_card::ProblemCard,
-        problems_ws::problems_feed_ws,
-    },
+    components::{loading::Loading, problem_card::ProblemCard, problems_ws::problems_feed_ws},
     i18n,
     state::STATE,
 };
@@ -19,10 +14,10 @@ use crate::{
 pub fn Problems() -> Element {
     let lang = crate::state::language();
     let mut all_problems = use_signal(|| false);
-    let mut picked = use_signal(|| None::<(String, Vec<u8>)>);
     let mut started = use_signal(|| false);
     let mut loading = use_signal(|| false);
-    let mut busy = use_signal(|| false);
+    // Имя контеста по id: показываем его в карточке каждой задачи.
+    let mut contest_names = use_signal(HashMap::<i64, String>::new);
     let is_owner = STATE.read().is_owner();
 
     if !started() {
@@ -31,7 +26,24 @@ pub fn Problems() -> Element {
         STATE.write().problems = Vec::new();
         let all = all_problems();
         let token = crate::state::token();
+        // lang уходит в задачу-спавн, рендеру оставляем свою копию.
+        let names_lang = lang.clone();
         spawn(async move {
+            // Названия контестов тянем отдельным запросом: у задачи есть только
+            // contest_id, а показывать надо и имя. Ошибку здесь глушим — список
+            // задач от неё зависеть не должен, в худшем случае останется id.
+            if let Ok(cs) = api::contests::get_contests(&token).await {
+                contest_names.set(
+                    cs.iter()
+                        .map(|c| {
+                            (
+                                c.id,
+                                i18n::contest_title(&names_lang, &c.name_ru, &c.name_en),
+                            )
+                        })
+                        .collect(),
+                );
+            }
             let res = if all {
                 api::problems::get_all_problems(&token).await
             } else {
@@ -48,101 +60,10 @@ pub fn Problems() -> Element {
         });
     }
 
-    let pick_label = if let Some((name, _)) = picked() {
-        i18n::tr(
-            &lang,
-            &format!("выбрать архив ({name})"),
-            &format!("pick archive ({name})"),
-        )
-    } else {
-        i18n::tr(&lang, "выбрать архив", "pick archive")
-    };
-
     rsx! {
         div { class: "flex flex-col gap-4 max-w-7xl mx-auto w-full",
             div { class: "flex flex-wrap gap-4 items-center",
                 h1 { class: "text-2xl font-bold", "{i18n::tr(&lang, \"Задачи\", \"Problems\")}" }
-
-                label { class: "btn btn-ghost btn-sm gap-1 relative overflow-hidden",
-                    {icon_element(if picked().is_some() { Icon::Pencil } else { Icon::Upload }, 16)}
-                    span { "{pick_label}" }
-                    input {
-                        r#type: "file",
-                        class: "absolute inset-0 opacity-0 cursor-pointer",
-                        onchange: move |ev| {
-                            let input = ev
-                                .as_web_event()
-                                .target()
-                                .and_then(|t| t.dyn_into::<web_sys::HtmlInputElement>().ok());
-                            let file = input
-                                .as_ref()
-                                .and_then(|el| el.files())
-                                .and_then(|f| f.item(0));
-                            if let Some(file) = file {
-                                let name = file.name();
-                                spawn(async move {
-                                    let buffer = wasm_bindgen_futures::JsFuture::from(file.array_buffer()).await;
-                                    match buffer {
-                                        Ok(b) => {
-                                            let view = js_sys::Uint8Array::new(&b);
-                                            picked.set(Some((name, view.to_vec())));
-                                        }
-                                        Err(_) => show_alert(AlertKind::Error, crate::i18n::tr(&crate::state::language(), "Не удалось прочитать файл", "Could not read file")),
-                                    }
-                                });
-                            }
-                            if let Some(input) = input {
-                                input.set_value("");
-                            }
-                        },
-                    }
-                }
-
-                button {
-                    class: "btn btn-neutral btn-sm gap-1",
-                    disabled: busy() || picked().is_none(),
-                    onclick: {
-                        move |_| {
-                            let Some((_, bytes)) = picked().clone() else { return; };
-                            if busy() {
-                                return;
-                            }
-                            busy.set(true);
-                            let token = crate::state::token();
-                            spawn(async move {
-                                crate::components::ws::mark_self_action("problems");
-                                match api::problems::create_problem(bytes, &token).await {
-                                    Ok(()) => {
-                                        busy.set(false);
-                                        show_alert(AlertKind::Info, i18n::tr(&crate::state::language(), "Задача создана", "Problem created"));
-                                        let all = all_problems();
-                                        let res = if all {
-                                            api::problems::get_all_problems(&token).await
-                                        } else {
-                                            api::problems::get_my_problems(&token).await
-                                        };
-                                        if let Ok(list) = res {
-                                            STATE.write().problems = list;
-                                        }
-                                    }
-                                    Err(e) => {
-                                        busy.set(false);
-                                        show_alert(AlertKind::Error, e);
-                                    }
-                                }
-                            });
-                        }
-                    },
-                    // Пока архив заливается, вместо иконки — спиннер прямо
-                    // в кнопке: список при этом не трогаем, он обновится сам
-                    // после успеха (плюс придёт событие ленты).
-                    if busy() {
-                        span { class: "loading loading-spinner loading-xs" }
-                    } else {
-                        {icon_element(if picked().is_none() { Icon::CircleBackslash } else { Icon::Plus }, 16)}
-                    }
-                    span { "{i18n::tr(&lang, \"создать\", \"create\")}" }
-                }
             }
 
             if is_owner {
@@ -188,7 +109,17 @@ pub fn Problems() -> Element {
             } else {
                 div { class: "flex flex-col gap-4 w-full max-h-[32rem] overflow-y-auto",
                     for p in STATE.read().problems.iter() {
-                        div {
+                        div { class: "flex flex-col gap-1",
+                            // Задача принадлежит контесту, но на списке это не
+                            // видно — показываем имя и id ссылкой на него.
+                            div { class: "flex items-center gap-2 px-1 text-sm opacity-70",
+                                Link {
+                                    to: "/contest/{p.contest_id}",
+                                    class: "link link-hover",
+                                    "{contest_names().get(&p.contest_id).cloned().unwrap_or_else(|| i18n::tr(&lang, \"контест\", \"contest\"))}",
+                                }
+                                span { class: "badge badge-sm badge-ghost", "#{p.contest_id}" }
+                            }
                             ProblemCard {
                                 problem: p.clone(),
                                 show_id: true,

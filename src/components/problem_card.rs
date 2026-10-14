@@ -14,6 +14,7 @@ use crate::{
 use super::{
     delete_form::DeleteForm,
     icon::{Icon, icon_element},
+    problem_number::{ProblemNumber, problem_index_zero_based},
 };
 
 /// Subgroup mini-card inside a problem card (mirrors `AJSubgroupCard`).
@@ -107,6 +108,8 @@ pub fn ProblemCard(props: ProblemCardProps) -> Element {
     let mut deleting = use_signal(|| false);
     let mut picked_archive = use_signal(|| None::<(String, Vec<u8>)>);
     let mut updating = use_signal(|| false);
+    // 1-based, как показываем в интерфейсе; на провод уходит через -1.
+    let mut number = use_signal(|| problem.index + 1);
 
     let name = if lang == "en" && !problem.name_en.is_empty() {
         problem.name_en.clone()
@@ -130,7 +133,12 @@ pub fn ProblemCard(props: ProblemCardProps) -> Element {
                     if can_manage {
                         button {
                             class: "btn btn-ghost btn-sm gap-1",
-                            onclick: move |_| admin_open.set(!admin_open()),
+                            onclick: move |_| {
+                                // Открывая заново, показываем актуальный номер
+                                // контеста, а не возможно оставшийся от правки.
+                                number.set(problem.index + 1);
+                                admin_open.set(!admin_open());
+                            },
                             {icon_element(Icon::Gear, 14)}
                             span { "{i18n::tr(&lang, \"админ.\", \"admin\")}" }
                         }
@@ -170,7 +178,11 @@ pub fn ProblemCard(props: ProblemCardProps) -> Element {
                                 span { class: "text-lg font-bold", "{i18n::tr(&lang, \"Управление задачей\", \"Problem management\")}" }
                                 button {
                                     class: "btn btn-sm btn-circle btn-ghost",
-                                    onclick: move |_| { picked_archive.set(None); admin_open.set(false); },
+                                    onclick: move |_| {
+                                        picked_archive.set(None);
+                                        number.set(problem.index + 1);
+                                        admin_open.set(false);
+                                    },
                                     "✕"
                                 }
                             }
@@ -214,6 +226,7 @@ pub fn ProblemCard(props: ProblemCardProps) -> Element {
                                     }
                                 },
                             }
+                            ProblemNumber { number, min: 1, disabled: updating() }
                         }
                         div { class: "card-actions justify-end mt-2",
                             button {
@@ -262,7 +275,9 @@ pub fn ProblemCard(props: ProblemCardProps) -> Element {
                                         updating.set(true);
                                         spawn(async move {
                                             crate::components::ws::mark_self_action("problems");
-                                            match api::problems::update_problem(pid, bytes, &token).await {
+                                            // Номер в UI 1-based, сервер ждёт 0-based.
+                                            let problem_index = problem_index_zero_based(number());
+                                            match api::problems::update_problem(pid, problem_index, bytes, &token).await {
                                                 Ok(()) => {
                                                     picked_archive.set(None);
                                                     admin_open.set(false);

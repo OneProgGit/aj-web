@@ -8,6 +8,14 @@ pub fn tr(lang: &str, ru: &str, en: &str) -> String {
     }
 }
 
+pub fn contest_title(lang: &str, name_ru: &str, name_en: &str) -> String {
+    if lang == "en" && !name_en.is_empty() {
+        name_en.to_string()
+    } else {
+        name_ru.to_string()
+    }
+}
+
 pub fn problem_title(lang: &str, name_ru: &str, name_en: &str) -> String {
     if lang == "en" && !name_en.is_empty() {
         name_en.to_string()

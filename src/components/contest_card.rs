@@ -367,14 +367,10 @@ pub fn ContestCard(props: ContestCardProps) -> Element {
                                         for (label, url) in info_links {
                                             div { class: "flex items-center gap-2",
                                                 span { class: "text-sm w-36 shrink-0", "{label}" }
-                                                button {
-                                                    class: "btn btn-ghost btn-sm gap-1 flex-1 min-w-0 justify-start",
-                                                    onclick: {
-                                                        let url = url.clone();
-                                                        move |_| crate::state::open_link(&url)
-                                                    },
-                                                    {icon_element(Icon::FileText, 14)}
-                                                    span { class: "truncate", "{url}" }
+                                                input {
+                                                    class: "input input-bordered input-sm flex-1 min-w-0",
+                                                    value: "{url}",
+                                                    disabled: true,
                                                 }
                                                 CopyButton { text: url.clone() }
                                             }

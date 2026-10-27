@@ -165,10 +165,10 @@ button.btn {
     border-bottom: 1px solid color-mix(in oklab, currentColor 20%, transparent);
 }
 .md-copy-btn {
-    font-size: 1em;
-    text-transform: none;
-    letter-spacing: normal;
-    padding: 0.25em 0.7em;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.35em;
     border-radius: 0.4rem;
     border: 1px solid color-mix(in oklab, currentColor 25%, transparent);
     background: color-mix(in oklab, currentColor 8%, transparent);
@@ -176,6 +176,7 @@ button.btn {
     cursor: pointer;
     opacity: 0.75;
 }
+.md-copy-btn svg { display: block; }
 .md-copy-btn:hover { opacity: 1; }
 .md-body .md-code { flex: 1; min-width: 0; }
 .md-body .md-codeblock > pre { margin: 0; padding: 0.8rem; overflow-x: auto; font-family: var(--font-mono, ui-monospace, monospace); font-size: 0.85em; line-height: 1.6; background: none; }

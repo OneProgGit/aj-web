@@ -204,6 +204,8 @@ pub fn Markdown(text: String) -> Element {
         let lang = crate::state::language();
         let copy_label = i18n::tr(&lang, "копировать", "copy");
         let done_label = i18n::tr(&lang, "скопировано", "copied");
+        let copy_icon = r#"<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>"#;
+        let done_icon = r#"<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>"#;
         let _ = js_sys::eval(&format!(
             r#"(() => {{
                 // Математика: pulldown уже превратил `$…$` в спаны, поэтому
@@ -225,13 +227,16 @@ pub fn Markdown(text: String) -> Element {
                     const head = block.querySelector('.md-codehead');
                     if (!head) return;
                     const btn = document.createElement('button');
-                    btn.textContent = '{copy_label}';
+                    btn.innerHTML = '{copy_icon}';
+                    btn.title = '{copy_label}';
+                    btn.setAttribute('aria-label', '{copy_label}');
                     btn.className = 'md-copy-btn';
                     btn.onclick = () => {{
                         const code = block.querySelector('code');
                         if (code) navigator.clipboard.writeText(code.innerText);
-                        btn.textContent = '{done_label}';
-                        setTimeout(() => {{ btn.textContent = '{copy_label}'; }}, 1500);
+                        btn.innerHTML = '{done_icon}';
+                        btn.title = '{done_label}';
+                        setTimeout(() => {{ btn.innerHTML = '{copy_icon}'; btn.title = '{copy_label}'; }}, 1500);
                     }};
                     head.appendChild(btn);
                 }});

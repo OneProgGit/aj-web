@@ -88,6 +88,9 @@ pub struct GlobalState {
     /// событию о посылке перечитать список посылок именно этой задачи.
     pub selected_problem_id: Option<i64>,
     pub leaderboard: Vec<LeaderboardRow>,
+    /// Показывать ли в таблице лидеров неофициальные посылки. Хранится здесь,
+    /// чтобы переключение переживало смену вкладок контеста.
+    pub leaderboard_include_unofficial: bool,
     pub problems: Vec<PublicProblemConfig>,
     pub users: Vec<PrivateUserData>,
 }
@@ -161,6 +164,15 @@ pub fn open_link(url: &str) {
         return;
     };
     let _ = window.open_with_url(url);
+}
+
+/// Copies text to the clipboard. Called from click handlers, so a rejected
+/// promise (insecure context, denied permission) is simply ignored.
+pub fn copy_text(text: &str) {
+    let Some(window) = web_sys::window() else {
+        return;
+    };
+    let _ = window.navigator().clipboard().write_text(text);
 }
 
 /// Convenience: currently selected UI language ("ru" or "en").

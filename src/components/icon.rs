@@ -26,6 +26,7 @@ pub enum Icon {
     Exit,
     Reader,
     Info,
+    Copy,
     Lightbulb,
     Report,
     Warning,
@@ -87,6 +88,9 @@ impl Icon {
             ],
             Self::Info => &[
                 "M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z",
+            ],
+            Self::Copy => &[
+                "M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z",
             ],
             // Лампочка — TIP в admonitions.
             Self::Lightbulb => &[

@@ -17,6 +17,9 @@ pub fn ContestLeaderboard(contest_id: i64) -> Element {
     let lang = crate::state::language();
     let mut started_for = use_signal(|| None::<i64>);
     let mut loaded = use_signal(|| false);
+    let mut include_unofficial = use_signal(|| STATE.read().leaderboard_include_unofficial);
+    let mut board_for = use_signal(|| None::<(i64, bool)>);
+    let mut board_loading = use_signal(|| false);
 
     if started_for() != Some(contest_id) {
         started_for.set(Some(contest_id));
@@ -38,11 +41,34 @@ pub fn ContestLeaderboard(contest_id: i64) -> Element {
                 Ok(list) => STATE.write().contest_problems = list,
                 Err(e) => show_alert(AlertKind::Error, e),
             }
-            match api::contests::get_contest_leaderboard(contest_id, &token).await {
-                Ok(rows) => STATE.write().leaderboard = rows,
+            loaded.set(true);
+        });
+    }
+
+    if board_for() != Some((contest_id, include_unofficial())) {
+        let include = include_unofficial();
+        board_for.set(Some((contest_id, include)));
+        board_loading.set(true);
+        spawn(async move {
+            let token = crate::state::token();
+            let res = if include {
+                api::contests::get_contest_leaderboard_all(contest_id, &token).await
+            } else {
+                api::contests::get_contest_leaderboard(contest_id, &token).await
+            };
+            match res {
+                Ok(rows) => {
+                    // Переключение могло уйти вперёд, пока шёл этот запрос:
+                    // тогда ответ уже неактуален.
+                    if STATE.read().leaderboard_include_unofficial == include {
+                        STATE.write().leaderboard = rows;
+                    }
+                }
                 Err(e) => show_alert(AlertKind::Error, e),
             }
-            loaded.set(true);
+            if board_for() == Some((contest_id, include)) {
+                board_loading.set(false);
+            }
         });
     }
 
@@ -149,6 +175,19 @@ pub fn ContestLeaderboard(contest_id: i64) -> Element {
         div { class: "flex flex-col gap-4 max-w-7xl mx-auto w-full",
             div { class: "flex flex-wrap gap-4 items-center",
                 h1 { class: "text-2xl font-bold", "{i18n::tr(&lang, \"Таблица лидеров\", \"Leaderboard\")}" }
+                label { class: "flex items-center gap-2 cursor-pointer",
+                    input {
+                        class: "toggle toggle-sm",
+                        r#type: "checkbox",
+                        checked: include_unofficial(),
+                        onchange: move |ev| {
+                            let value = ev.checked();
+                            include_unofficial.set(value);
+                            STATE.write().leaderboard_include_unofficial = value;
+                        },
+                    }
+                    span { "{i18n::tr(&lang, \"показывать неофициальные\", \"show unofficial\")}" }
+                }
                 if can_manage {
                     details { class: "dropdown",
                         summary { class: "btn btn-ghost btn-sm gap-1",
@@ -188,7 +227,7 @@ pub fn ContestLeaderboard(contest_id: i64) -> Element {
                 }
             }
 
-            if !loaded() {
+            if !loaded() || board_loading() {
                 Loading {}
             } else {
                 Leaderboard {

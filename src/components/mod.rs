@@ -4,6 +4,7 @@ pub mod back_button;
 pub mod contest_card;
 pub mod contest_form;
 pub mod contest_ws;
+pub mod copy_button;
 pub mod datetime_input;
 pub mod datetime_text;
 pub mod delete_form;

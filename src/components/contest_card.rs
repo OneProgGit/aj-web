@@ -8,6 +8,7 @@ use crate::{
 
 use super::{
     contest_form::{ContestForm, ContestInit},
+    copy_button::CopyButton,
     datetime_text::DateTimeText,
     delete_form::DeleteForm,
     icon::{Icon, icon_element},
@@ -120,6 +121,28 @@ pub fn ContestCard(props: ContestCardProps) -> Element {
     let statements_en = contest.statements_url_en.clone();
     let editorial_en = contest.editorial_url_en.clone();
 
+    let info_links = [
+        (
+            i18n::tr(&lang, "условия (рус.)", "statements (ru)"),
+            contest.statements_url_ru.clone(),
+        ),
+        (
+            i18n::tr(&lang, "разбор (рус.)", "editorial (ru)"),
+            contest.editorial_url_ru.clone(),
+        ),
+        (
+            i18n::tr(&lang, "условия (англ.)", "statements (en)"),
+            contest.statements_url_en.clone(),
+        ),
+        (
+            i18n::tr(&lang, "разбор (англ.)", "editorial (en)"),
+            contest.editorial_url_en.clone(),
+        ),
+    ]
+    .into_iter()
+    .filter(|(_, url)| !url.is_empty())
+    .collect::<Vec<_>>();
+
     rsx! {
         div { class: "card w-full max-w-3xl shadow-lg {status.css_bg()} {status.css_text()}",
             div { class: "card-body gap-3",
@@ -231,6 +254,12 @@ pub fn ContestCard(props: ContestCardProps) -> Element {
                             span { "{i18n::tr(&lang, \"войти\", \"enter\")}" }
                         }
                     }
+                    button {
+                        class: "btn btn-neutral btn-sm gap-1",
+                        onclick: move |_| info_open.set(!info_open()),
+                        {icon_element(Icon::Info, 16)}
+                        span { "{i18n::tr(&lang, \"инфо\", \"info\")}" }
+                    }
                     if can_manage {
                         button {
                             class: "btn btn-neutral btn-sm gap-1",
@@ -243,13 +272,6 @@ pub fn ContestCard(props: ContestCardProps) -> Element {
                             onclick: move |_| deleting.set(!deleting()),
                             {icon_element(Icon::Trash, 16)}
                             span { "{i18n::tr(&lang, \"удалить\", \"delete\")}" }
-                        }
-                    } else {
-                        button {
-                            class: "btn btn-neutral btn-sm gap-1",
-                            onclick: move |_| info_open.set(!info_open()),
-                            {icon_element(Icon::Info, 16)}
-                            span { "{i18n::tr(&lang, \"инфо\", \"info\")}" }
                         }
                     }
                 }
@@ -336,6 +358,41 @@ pub fn ContestCard(props: ContestCardProps) -> Element {
                                         checked: contest.upsolving_enabled,
                                     }
                                     span { "{i18n::tr(&lang, \"открыть дорешку\", \"open upsolving\")}" }
+                                }
+                                if !info_links.is_empty() {
+                                    div { class: "divider my-0 text-xs opacity-60",
+                                        "{i18n::tr(&lang, \"ссылки\", \"links\")}"
+                                    }
+                                    div { class: "flex flex-col gap-2",
+                                        for (label, url) in info_links {
+                                            div { class: "flex items-center gap-2",
+                                                span { class: "text-sm w-36 shrink-0", "{label}" }
+                                                button {
+                                                    class: "btn btn-ghost btn-sm gap-1 flex-1 min-w-0 justify-start",
+                                                    onclick: {
+                                                        let url = url.clone();
+                                                        move |_| crate::state::open_link(&url)
+                                                    },
+                                                    {icon_element(Icon::FileText, 14)}
+                                                    span { class: "truncate", "{url}" }
+                                                }
+                                                CopyButton { text: url.clone() }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            if can_manage {
+                                div { class: "card-actions justify-end mt-2",
+                                    button {
+                                        class: "btn btn-neutral btn-sm gap-1",
+                                        onclick: move |_| {
+                                            info_open.set(false);
+                                            editing.set(true);
+                                        },
+                                        {icon_element(Icon::Pencil, 16)}
+                                        span { "{i18n::tr(&lang, \"изменить\", \"edit\")}" }
+                                    }
                                 }
                             }
                         }

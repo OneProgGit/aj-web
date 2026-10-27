@@ -115,6 +115,13 @@ pub async fn get_contest_leaderboard(
     api::get(&format!("/contests/{contest_id}/leaderboard"), token).await
 }
 
+pub async fn get_contest_leaderboard_all(
+    contest_id: i64,
+    token: &Option<String>,
+) -> Result<Vec<LeaderboardRow>, String> {
+    api::get(&format!("/contests/{contest_id}/leaderboard/all"), token).await
+}
+
 pub async fn get_contest_questions_all(
     contest_id: i64,
     token: &Option<String>,

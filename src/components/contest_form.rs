@@ -6,6 +6,7 @@ use crate::{
     models::contests::{ContestRequest, PublicContestConfig},
 };
 
+use super::copy_button::CopyButton;
 use super::datetime_input::DateTimeInput;
 use super::icon::{Icon, icon_element};
 
@@ -168,16 +169,22 @@ pub fn ContestForm(
                     oninput: move |ev| name_ru.set(ev.value()),
                 }
                 span { class: "label-text", "{i18n::tr(&lang, \"ссылка на условия (рус.)\", \"statements url (ru)\")}" }
-                input {
-                    class: "input input-bordered",
-                    value: s_url_ru(),
-                    oninput: move |ev| s_url_ru.set(ev.value()),
+                div { class: "flex items-center gap-2",
+                    input {
+                        class: "input input-bordered flex-1 min-w-0",
+                        value: s_url_ru(),
+                        oninput: move |ev| s_url_ru.set(ev.value()),
+                    }
+                    CopyButton { text: s_url_ru() }
                 }
                 span { class: "label-text", "{i18n::tr(&lang, \"ссылка на разбор (рус.)\", \"editorial url (ru)\")}" }
-                input {
-                    class: "input input-bordered",
-                    value: e_url_ru(),
-                    oninput: move |ev| e_url_ru.set(ev.value()),
+                div { class: "flex items-center gap-2",
+                    input {
+                        class: "input input-bordered flex-1 min-w-0",
+                        value: e_url_ru(),
+                        oninput: move |ev| e_url_ru.set(ev.value()),
+                    }
+                    CopyButton { text: e_url_ru() }
                 }
             } else {
                 span { class: "label-text", "{i18n::tr(&lang, \"название (англ.)\", \"name (en)\")}" }
@@ -187,16 +194,22 @@ pub fn ContestForm(
                     oninput: move |ev| name_en.set(ev.value()),
                 }
                 span { class: "label-text", "{i18n::tr(&lang, \"ссылка на условия (англ.)\", \"statements url (en)\")}" }
-                input {
-                    class: "input input-bordered",
-                    value: s_url_en(),
-                    oninput: move |ev| s_url_en.set(ev.value()),
+                div { class: "flex items-center gap-2",
+                    input {
+                        class: "input input-bordered flex-1 min-w-0",
+                        value: s_url_en(),
+                        oninput: move |ev| s_url_en.set(ev.value()),
+                    }
+                    CopyButton { text: s_url_en() }
                 }
                 span { class: "label-text", "{i18n::tr(&lang, \"ссылка на разбор (англ.)\", \"editorial url (en)\")}" }
-                input {
-                    class: "input input-bordered",
-                    value: e_url_en(),
-                    oninput: move |ev| e_url_en.set(ev.value()),
+                div { class: "flex items-center gap-2",
+                    input {
+                        class: "input input-bordered flex-1 min-w-0",
+                        value: e_url_en(),
+                        oninput: move |ev| e_url_en.set(ev.value()),
+                    }
+                    CopyButton { text: e_url_en() }
                 }
             }
         }

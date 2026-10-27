@@ -277,39 +277,84 @@ fn add_problem_button(contest: PublicContestConfig, problems: Vec<PublicProblemC
 }
 
 /// Retest button for the selected problem (admins only, empty otherwise).
-fn retest_button(selected: Option<PublicProblemConfig>, mut busy: Signal<bool>) -> Element {
+#[component]
+pub fn RetestButton(
+    problem_id: Option<i64>,
+    problem_index: Option<i64>,
+    can_manage: bool,
+    busy: Signal<bool>,
+) -> Element {
     let lang = crate::state::language();
+    let mut confirming = use_signal(|| false);
+
+    if !can_manage {
+        return rsx! {};
+    }
+
     rsx! {
-        if selected.as_ref().is_some_and(|p| STATE.read().can_manage_problem(p)) {
-            button {
-                class: "btn btn-ghost btn-sm gap-1",
-                disabled: busy(),
-                onclick: {
-                    let token = STATE.read().token.clone();
-                    let pid = selected.as_ref().map(|p| p.id);
-                    move |_| {
-                        let Some(pid) = pid else { return; };
-                        if busy() {
-                            return;
-                        }
-                        busy.set(true);
-                        let token = token.clone();
-                        spawn(async move {
-                            match api::problems::retest_problem(pid, &token).await {
-                                Ok(()) => {
-                                    busy.set(false);
-                                    show_alert(AlertKind::Success, i18n::tr(&crate::state::language(), "Ретест запущен", "Retest started"));
-                                }
-                                Err(e) => {
-                                    busy.set(false);
-                                    show_alert(AlertKind::Error, e);
-                                }
-                            }
-                        });
+        button {
+            class: "btn btn-ghost btn-sm gap-1",
+            disabled: busy(),
+            onclick: move |_| confirming.set(true),
+            {icon_element(Icon::Update, 16)}
+            span { "{i18n::tr(&lang, \"ретест\", \"retest\")}" }
+        }
+
+        if confirming() {
+            div { class: "modal modal-open",
+                div { class: "modal-box max-w-sm",
+                    h3 { class: "text-lg font-bold",
+                        "{i18n::tr(&lang, \"Запустить ретест?\", \"Start retest?\")}"
                     }
-                },
-                {icon_element(Icon::Update, 16)}
-                span { "{i18n::tr(&lang, \"ретест\", \"retest\")}" }
+                    p { class: "py-4",
+                        {match problem_index {
+                            Some(number) => i18n::tr(
+                                &lang,
+                                &format!("Все посылки задачи #{number} будут перепроверены."),
+                                &format!("All submissions of problem #{number} will be rechecked."),
+                            ),
+                            None => i18n::tr(
+                                &lang,
+                                "Все посылки задачи будут перепроверены.",
+                                "All submissions of the problem will be rechecked.",
+                            ),
+                        }}
+                    }
+                    div { class: "modal-action",
+                        button {
+                            class: "btn btn-ghost btn-sm",
+                            onclick: move |_| confirming.set(false),
+                            "{i18n::tr(&lang, \"отмена\", \"cancel\")}"
+                        }
+                        button {
+                            class: "btn btn-primary btn-sm gap-1",
+                            disabled: busy(),
+                            onclick: move |_| {
+                                let Some(pid) = problem_id else { return; };
+                                confirming.set(false);
+                                if busy() {
+                                    return;
+                                }
+                                busy.set(true);
+                                let token = STATE.read().token.clone();
+                                spawn(async move {
+                                    match api::problems::retest_problem(pid, &token).await {
+                                        Ok(()) => {
+                                            busy.set(false);
+                                            show_alert(AlertKind::Success, i18n::tr(&crate::state::language(), "Ретест запущен", "Retest started"));
+                                        }
+                                        Err(e) => {
+                                            busy.set(false);
+                                            show_alert(AlertKind::Error, e);
+                                        }
+                                    }
+                                });
+                            },
+                            {icon_element(Icon::Update, 16)}
+                            span { "{i18n::tr(&lang, \"запустить\", \"start\")}" }
+                        }
+                    }
+                }
             }
         }
     }
@@ -344,7 +389,13 @@ async fn load_contest_state(
     }
 
     if force_data {
-        match api::contests::get_contest_leaderboard(contest_id, &token).await {
+        let include_unofficial = STATE.read().leaderboard_include_unofficial;
+        let res = if include_unofficial {
+            api::contests::get_contest_leaderboard_all(contest_id, &token).await
+        } else {
+            api::contests::get_contest_leaderboard(contest_id, &token).await
+        };
+        match res {
             Ok(rows) => STATE.write().leaderboard = rows,
             Err(e) => crate::state::show_error(e),
         }
@@ -440,6 +491,9 @@ pub fn Contest(contest_id: i64) -> Element {
         .is_some_and(|c| STATE.read().can_manage_contest(c));
 
     let selected = problems.get(selected_problem()).cloned();
+    let can_retest = selected
+        .as_ref()
+        .is_some_and(|p| STATE.read().can_manage_problem(p));
 
     let announcements_label = i18n::tr(
         &lang,
@@ -522,7 +576,12 @@ pub fn Contest(contest_id: i64) -> Element {
                     if let Some(problem) = &selected {
                         div { class: "flex flex-wrap gap-4 items-center",
                             {problem_selector(problems.clone(), selected_problem, switching)}
-                            {retest_button(selected.clone(), busy)}
+                            RetestButton {
+                                problem_id: selected.as_ref().map(|p| p.id),
+                                problem_index: selected.as_ref().map(|p| p.index + 1),
+                                can_manage: can_retest,
+                                busy,
+                            }
                         }
                         div { class: "flex flex-wrap gap-4 items-center min-h-0",
                         select {
@@ -704,7 +763,12 @@ pub fn Contest(contest_id: i64) -> Element {
                         // и лишний div встал бы третьей ячейкой.
                         div { class: "flex flex-wrap gap-4 items-center",
                             {problem_selector(problems.clone(), selected_problem, switching)}
-                            {retest_button(selected.clone(), busy)}
+                            RetestButton {
+                                problem_id: selected.as_ref().map(|p| p.id),
+                                problem_index: selected.as_ref().map(|p| p.index + 1),
+                                can_manage: can_retest,
+                                busy,
+                            }
                             {add_problem_button(contest.clone(), problems.clone())}
                         }
                     }

@@ -53,4 +53,6 @@ debug-assertions = false
 overflow-checks = false
 lto = true
 panic = "abort"
-strip = true
+# LLVM 23 (Rust 1.99) с `strip = true` вырезает и custom-секции wasm,
+# из-за чего wasm-bindgen теряет `__wasm_bindgen_unstable`.
+strip = "debuginfo"

@@ -86,6 +86,44 @@ pub fn ContestLeaderboard(contest_id: i64) -> Element {
 
     let export_lang = lang.clone();
     let export = std::rc::Rc::new(move |fmt: &'static str| {
+        if fmt == "cup" {
+            let esc_toml = |s: &str| {
+                let mut out = String::new();
+                for c in s.chars() {
+                    match c {
+                        '\\' => out.push_str("\\\\"),
+                        '"' => out.push_str("\\\""),
+                        '\n' => out.push_str("\\n"),
+                        '\r' => out.push_str("\\r"),
+                        '\t' => out.push_str("\\t"),
+                        c if c.is_control() => out.push_str(&format!("\\u{:04X}", c as u32)),
+                        c => out.push(c),
+                    }
+                }
+                out
+            };
+            let mut toml = String::new();
+            for (place, row) in leaderboard.iter().enumerate() {
+                let scores = row
+                    .scores
+                    .iter()
+                    .map(|score| {
+                        score.map_or_else(|| "\"-\"".to_string(), |score| score.to_string())
+                    })
+                    .collect::<Vec<_>>()
+                    .join(", ");
+                toml.push_str(&format!(
+                    "[[standings]]\nplace = {}\nid = {}\nwho = \"{}\"\nscores = [{}]\ntotal = {}\n\n",
+                    place + 1,
+                    row.user_id,
+                    esc_toml(&row.user_login),
+                    scores,
+                    row.total_score,
+                ));
+            }
+            crate::api::trigger_download(toml.into_bytes(), "oneprog-cup.toml");
+            return;
+        }
         let esc = |s: &str| {
             s.replace('&', "&amp;")
                 .replace('<', "&lt;")
@@ -195,6 +233,15 @@ pub fn ContestLeaderboard(contest_id: i64) -> Element {
                             span { "{i18n::tr(&lang, \"экспортировать\", \"export\")}" }
                         }
                         ul { class: "menu dropdown-content bg-base-200 rounded-box p-2 shadow",
+                            li {
+                                button {
+                                    onclick: {
+                                        let export = export.clone();
+                                        move |_| export("cup")
+                                    },
+                                    "oneprog cup (.toml)"
+                                }
+                            }
                             li {
                                 button {
                                     onclick: {

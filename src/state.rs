@@ -6,7 +6,6 @@ use crate::models::{
 };
 use chrono::Utc;
 use dioxus::prelude::*;
-use std::cmp::Ordering;
 
 /// Mirrors `AJContestStatus` in aj-app.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -19,18 +18,20 @@ pub enum ContestStatus {
 
 pub fn contest_status(contest: &PublicContestConfig) -> ContestStatus {
     let now = Utc::now();
-    match now.cmp(&contest.starts_at) {
-        Ordering::Less => ContestStatus::BeforeStart,
-        _ => match now.cmp(&contest.finishes_at) {
-            Ordering::Less | Ordering::Equal => ContestStatus::Ongoing,
-            _ => {
-                if contest.upsolving_enabled {
-                    ContestStatus::Upsolving
-                } else {
-                    ContestStatus::Finished
-                }
-            }
-        },
+    // Нет даты начала — контест уже открыт; нет даты конца — не заканчивается.
+    if contest.starts_at.is_some_and(|starts_at| now < starts_at) {
+        return ContestStatus::BeforeStart;
+    }
+    if contest
+        .finishes_at
+        .is_none_or(|finishes_at| now <= finishes_at)
+    {
+        return ContestStatus::Ongoing;
+    }
+    if contest.upsolving_enabled {
+        ContestStatus::Upsolving
+    } else {
+        ContestStatus::Finished
     }
 }
 

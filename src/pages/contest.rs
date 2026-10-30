@@ -76,12 +76,13 @@ fn problem_selector(
             onchange: move |ev| {
                 let idx = ev.value().parse::<usize>().unwrap_or(0);
                 selected_problem.set(idx);
+                let problems = STATE.read().contest_problems.clone();
+                STATE.write().selected_problem_id = problems.get(idx).map(|p| p.id);
                 let token = crate::state::token();
                 let all = STATE.read().all_submissions;
                 let mut switching = switching;
                 switching.set(true);
                 spawn(async move {
-                    let problems = STATE.read().contest_problems.clone();
                     let res = match problems.get(idx) {
                         Some(problem) if all => {
                             api::problems::get_problem_submissions_all(problem.id, &token).await
@@ -376,6 +377,8 @@ async fn load_contest_state(
     }
 
     let problems = STATE.read().contest_problems.clone();
+    // По этому id ws-обработчик перечитывает посылки при событиях о них.
+    STATE.write().selected_problem_id = problems.get(problem_index).map(|p| p.id);
     if let Some(problem) = problems.get(problem_index) {
         let res = if all_submissions {
             api::problems::get_problem_submissions_all(problem.id, &token).await
@@ -696,7 +699,7 @@ pub fn Contest(contest_id: i64) -> Element {
                                         match api::problems::submit_solution(contest_id, problem_id, language, bytes, &token).await {
                                             Ok(id) => {
                                                 busy.set(false);
-                                                show_alert(AlertKind::Success, i18n::tr(&crate::state::language(), &format!("Посылка #{id} отправлена"), &format!("Submission #{id} sent")));
+                                                show_alert(AlertKind::Info, i18n::tr(&crate::state::language(), &format!("Посылка #{id} отправлена"), &format!("Submission #{id} sent")));
                                                 let all = STATE.read().all_submissions;
                                                 load_contest_state(contest_id, idx, all, false).await;
                                             }

@@ -1,7 +1,10 @@
 use dioxus::prelude::*;
+use dioxus_web::WebEventExt;
 use pulldown_cmark::{Options, Parser};
+use wasm_bindgen::JsCast;
 
 use super::icon::{Icon, icon_element};
+use crate::alerts::{AlertKind, show_alert};
 use crate::i18n;
 
 fn render_markdown(text: &str, lang: &str) -> String {
@@ -244,7 +247,25 @@ pub fn Markdown(text: String) -> Element {
         ));
     });
     rsx! {
-        div { class: "md-body", dangerous_inner_html: applied() }
+        div {
+            class: "md-body",
+            dangerous_inner_html: applied(),
+            // Кнопку копирования в блоках кода создаёт JS (её нет в rsx),
+            // поэтому клик по ней ловим делегированием на обёртке.
+            onclick: move |ev| {
+                let copied = ev
+                    .as_web_event()
+                    .target()
+                    .and_then(|target| target.dyn_into::<web_sys::Element>().ok())
+                    .is_some_and(|el| el.closest(".md-copy-btn").ok().flatten().is_some());
+                if copied {
+                    show_alert(
+                        AlertKind::Success,
+                        i18n::tr(&crate::state::language(), "Скопировано", "Copied"),
+                    );
+                }
+            },
+        }
     }
 }
 

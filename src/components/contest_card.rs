@@ -215,30 +215,47 @@ pub fn ContestCard(props: ContestCardProps) -> Element {
                 if status == ContestStatus::Ongoing {
                     div { class: "flex items-center justify-between gap-4",
                         span { class: "text-sm", "{i18n::tr(&lang, \"начало\", \"start\")}" }
-                        DateTimeText { time: contest.starts_at, class: "text-sm italic font-semibold text-right" }
+                        if let Some(starts_at) = contest.starts_at {
+                            DateTimeText { time: starts_at, class: "text-sm italic font-semibold text-right" }
+                        } else {
+                            span { class: "text-sm italic font-semibold text-right", "TBA" }
+                        }
                     }
                     div { class: "flex items-center justify-between gap-4",
                         span { class: "text-sm", "{i18n::tr(&lang, \"осталось\", \"remaining\")}" }
                         span { class: "text-sm italic font-semibold",
-                            {format_remaining(&lang, contest.finishes_at - now())}
+                            {contest.finishes_at.map_or_else(
+                                || "TBA".to_string(),
+                                |finishes_at| format_remaining(&lang, finishes_at - now()),
+                            )}
                         }
                     }
                 } else if !compact {
                     div { class: "flex items-center justify-between gap-4",
                         span { class: "text-sm", "{i18n::tr(&lang, \"начало\", \"start\")}" }
-                        DateTimeText { time: contest.starts_at, class: "text-sm italic font-semibold text-right" }
+                        if let Some(starts_at) = contest.starts_at {
+                            DateTimeText { time: starts_at, class: "text-sm italic font-semibold text-right" }
+                        } else {
+                            span { class: "text-sm italic font-semibold text-right", "TBA" }
+                        }
                     }
                     div { class: "flex items-center justify-between gap-4",
                         span { class: "text-sm", "{i18n::tr(&lang, \"продолжительность\", \"duration\")}" }
                         span { class: "text-sm italic font-semibold",
-                            {format_duration(&lang, contest.finishes_at - contest.starts_at)}
+                            {match (contest.starts_at, contest.finishes_at) {
+                                (Some(starts_at), Some(finishes_at)) => format_duration(&lang, finishes_at - starts_at),
+                                _ => "TBA".to_string(),
+                            }}
                         }
                     }
                 } else {
                     div { class: "flex items-center justify-between gap-4",
                         span { class: "text-sm", "{i18n::tr(&lang, \"продолжительность\", \"duration\")}" }
                         span { class: "text-sm italic font-semibold",
-                            {format_duration(&lang, contest.finishes_at - contest.starts_at)}
+                            {match (contest.starts_at, contest.finishes_at) {
+                                (Some(starts_at), Some(finishes_at)) => format_duration(&lang, finishes_at - starts_at),
+                                _ => "TBA".to_string(),
+                            }}
                         }
                     }
                 }

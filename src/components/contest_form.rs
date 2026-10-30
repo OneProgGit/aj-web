@@ -55,11 +55,17 @@ pub fn ContestForm(
             .as_ref()
             .map_or(String::new(), |c| c.name_en.clone())
     });
-    let mut starts = use_signal(|| initial.0.as_ref().map_or(now, |c| c.starts_at));
+    let mut starts = use_signal(|| initial.0.as_ref().and_then(|c| c.starts_at).unwrap_or(now));
+    let mut no_start = use_signal(|| initial.0.as_ref().is_some_and(|c| c.starts_at.is_none()));
+    // Поля независимы: можно не указывать начало, но указать продолжительность,
+    // и наоборот.
+    let mut no_duration =
+        use_signal(|| initial.0.as_ref().is_some_and(|c| c.finishes_at.is_none()));
     let init_secs = initial
         .0
         .as_ref()
-        .map_or(7200, |c| (c.finishes_at - c.starts_at).num_seconds().max(0));
+        .and_then(|c| Some((c.finishes_at? - c.starts_at?).num_seconds().max(0)))
+        .unwrap_or(7200);
     let mut dur_d = use_signal(|| (init_secs / 86400).to_string());
     let mut dur_h = use_signal(|| ((init_secs % 86400) / 3600).to_string());
     let mut dur_m = use_signal(|| ((init_secs % 3600) / 60).to_string());
@@ -140,7 +146,7 @@ pub fn ContestForm(
     });
 
     let valid = !name_ru().is_empty() || !name_en().is_empty();
-    let invalid = !valid || duration_secs() <= 0;
+    let invalid = !valid || (!no_duration() && duration_secs() <= 0);
 
     // Языковые поля и общие настройки — отдельными замыканиями: внутри rsx!
     // ветвление рядом с общим списком узлов раньше теряло соседей, и общие
@@ -222,45 +228,75 @@ pub fn ContestForm(
             div { class: "divider my-0 text-xs opacity-60",
                 "{i18n::tr(&lang, \"общие настройки\", \"common settings\")}"
             }
-            span { class: "label-text", "{i18n::tr(&lang, \"начало в\", \"starts at\")}" }
-            DateTimeInput {
-                value: starts(),
-                onchange: move |dt| starts.set(dt),
+            div { class: "flex items-center justify-between gap-2",
+                span { class: "label-text", "{i18n::tr(&lang, \"начало в\", \"starts at\")}" }
+                label { class: "label cursor-pointer gap-2 py-0",
+                    span { class: "label-text", "{i18n::tr(&lang, \"нет\", \"none\")}" }
+                    input {
+                        class: "toggle toggle-sm",
+                        r#type: "checkbox",
+                        checked: no_start(),
+                        onchange: move |ev| no_start.set(ev.checked()),
+                    }
+                }
             }
-            span { class: "label-text", "{i18n::tr(&lang, \"продолжительность\", \"duration\")}" }
-            div { class: "flex flex-wrap items-center gap-2",
-                input {
-                    class: "input input-bordered w-20",
-                    r#type: "number",
-                    min: "0",
-                    value: dur_d(),
-                    oninput: move |ev| dur_d.set(ev.value()),
+            if no_start() {
+                span { class: "text-sm italic opacity-70", "—" }
+            } else {
+                DateTimeInput {
+                    value: starts(),
+                    onchange: move |dt| starts.set(dt),
                 }
-                span { class: "text-sm", "{i18n::tr(&lang, \"дн\", \"d\")}" }
-                input {
-                    class: "input input-bordered w-20",
-                    r#type: "number",
-                    min: "0",
-                    value: dur_h(),
-                    oninput: move |ev| dur_h.set(ev.value()),
+            }
+            div { class: "flex items-center justify-between gap-2",
+                span { class: "label-text", "{i18n::tr(&lang, \"продолжительность\", \"duration\")}" }
+                label { class: "label cursor-pointer gap-2 py-0",
+                    span { class: "label-text", "{i18n::tr(&lang, \"нет\", \"none\")}" }
+                    input {
+                        class: "toggle toggle-sm",
+                        r#type: "checkbox",
+                        checked: no_duration(),
+                        onchange: move |ev| no_duration.set(ev.checked()),
+                    }
                 }
-                span { class: "text-sm", "{i18n::tr(&lang, \"ч\", \"h\")}" }
-                input {
-                    class: "input input-bordered w-20",
-                    r#type: "number",
-                    min: "0",
-                    value: dur_m(),
-                    oninput: move |ev| dur_m.set(ev.value()),
+            }
+            if no_duration() {
+                span { class: "text-sm italic opacity-70", "—" }
+            } else {
+                div { class: "flex flex-wrap items-center gap-2",
+                    input {
+                        class: "input input-bordered w-20",
+                        r#type: "number",
+                        min: "0",
+                        value: dur_d(),
+                        oninput: move |ev| dur_d.set(ev.value()),
+                    }
+                    span { class: "text-sm", "{i18n::tr(&lang, \"дн\", \"d\")}" }
+                    input {
+                        class: "input input-bordered w-20",
+                        r#type: "number",
+                        min: "0",
+                        value: dur_h(),
+                        oninput: move |ev| dur_h.set(ev.value()),
+                    }
+                    span { class: "text-sm", "{i18n::tr(&lang, \"ч\", \"h\")}" }
+                    input {
+                        class: "input input-bordered w-20",
+                        r#type: "number",
+                        min: "0",
+                        value: dur_m(),
+                        oninput: move |ev| dur_m.set(ev.value()),
+                    }
+                    span { class: "text-sm", "{i18n::tr(&lang, \"мин\", \"min\")}" }
+                    input {
+                        class: "input input-bordered w-20",
+                        r#type: "number",
+                        min: "0",
+                        value: dur_s(),
+                        oninput: move |ev| dur_s.set(ev.value()),
+                    }
+                    span { class: "text-sm", "{i18n::tr(&lang, \"с\", \"s\")}" }
                 }
-                span { class: "text-sm", "{i18n::tr(&lang, \"мин\", \"min\")}" }
-                input {
-                    class: "input input-bordered w-20",
-                    r#type: "number",
-                    min: "0",
-                    value: dur_s(),
-                    oninput: move |ev| dur_s.set(ev.value()),
-                }
-                span { class: "text-sm", "{i18n::tr(&lang, \"с\", \"s\")}" }
             }
             div { class: "flex items-center gap-3",
                 input {
@@ -317,8 +353,9 @@ pub fn ContestForm(
                         let request = ContestRequest {
                             name_ru: name_ru(),
                             name_en: name_en(),
-                            starts_at: starts(),
-                            finishes_at: starts() + Duration::seconds(duration_secs()),
+                            starts_at: (!no_start()).then_some(starts()),
+                            finishes_at: (!no_duration())
+                                .then(|| starts() + Duration::seconds(duration_secs())),
                             statements_url_ru: s_url_ru(),
                             editorial_url_ru: e_url_ru(),
                             statements_url_en: s_url_en(),

@@ -6,12 +6,15 @@ use chrono::Utc;
 use dioxus::prelude::*;
 use wasm_bindgen_futures::spawn_local;
 
-use super::ws::{subscribe_ws, unsubscribe_ws};
+use super::{
+    verdict_badge::verdict_label,
+    ws::{subscribe_ws, unsubscribe_ws},
+};
 
 use crate::{
     alerts::{AlertKind, show_alert},
     i18n,
-    models::contests::ContestsEvent,
+    models::{contests::ContestsEvent, verdicts::TestingVerdict},
     state::{ContestStatus, STATE, contest_status},
 };
 
@@ -82,6 +85,41 @@ async fn reload_questions(contest_id: i64) {
     };
     if let Ok(questions) = res {
         STATE.write().questions = questions;
+    }
+}
+
+/// Таблица лидеров меняется от вердикта посылки, поэтому перечитываем её по
+/// ws-событию. Режим (с неофициальными или без) фиксируем до запроса: пока он
+/// шёл, пользователь мог переключить тумблер, и старый ответ затирать нельзя.
+async fn reload_leaderboard(contest_id: i64) {
+    let token = crate::state::token();
+    let include_unofficial = STATE.read().leaderboard_include_unofficial;
+    let res = if include_unofficial {
+        crate::api::contests::get_contest_leaderboard_all(contest_id, &token).await
+    } else {
+        crate::api::contests::get_contest_leaderboard(contest_id, &token).await
+    };
+    if let Ok(rows) = res
+        && STATE.read().leaderboard_include_unofficial == include_unofficial
+    {
+        STATE.write().leaderboard = rows;
+    }
+}
+
+async fn reload_submissions() {
+    let pid = STATE.read().selected_problem_id;
+    let Some(pid) = pid else {
+        return;
+    };
+    let all = STATE.read().all_submissions;
+    let token = crate::state::token();
+    let res = if all {
+        crate::api::problems::get_problem_submissions_all(pid, &token).await
+    } else {
+        crate::api::problems::get_problem_submissions_my(pid, &token).await
+    };
+    if let Ok(subs) = res {
+        STATE.write().submissions = subs;
     }
 }
 
@@ -185,6 +223,7 @@ pub fn contest_status_watcher() {
                 .contests
                 .iter()
                 .flat_map(|c| [c.starts_at, c.finishes_at])
+                .flatten()
                 .filter(|t| *t > now)
                 .min();
             let wait = match next {
@@ -371,25 +410,64 @@ async fn handle_event(contest_id: Option<i64>, event: ContestsEvent) {
         }
         // Посылки: в 0.10.13 по ним приходят отдельные события, раньше список
         // обновлялся только по кнопке. В контексте контеста перечитываем список
-        // и молчим — тост о новой посылке чужого контеста здесь лишний.
-        ContestsEvent::NewSubmission(_) | ContestsEvent::SubmissionUpdated(_) => {
-            if let Some(cid) = contest_id {
-                let pid = STATE.read().selected_problem_id;
-                if let Some(pid) = pid {
-                    let all = STATE.read().all_submissions;
-                    let token = crate::state::token();
-                    let res = if all {
-                        crate::api::problems::get_problem_submissions_all(pid, &token).await
-                    } else {
-                        crate::api::problems::get_problem_submissions_my(pid, &token).await
-                    };
-                    if let Ok(subs) = res {
-                        STATE.write().submissions = subs;
-                    }
+        // и показываем уведомление, если событие касается видимой нам посылки
+        // (в режиме «мои» это свои, в режиме «все» — любые).
+        ContestsEvent::NewSubmission(id) => {
+            if contest_id.is_some() {
+                reload_submissions().await;
+                let visible = STATE.read().submissions.iter().any(|s| s.id == *id);
+                if visible {
+                    Some(i18n::tr(
+                        &lang,
+                        &format!("Посылка #{id} отправлена"),
+                        &format!("Submission #{id} sent"),
+                    ))
+                } else {
+                    None
                 }
-                let _ = cid;
+            } else {
+                None
             }
-            None
+        }
+        // Смена вердикта меняет и список посылок, и очки в таблице лидеров.
+        ContestsEvent::SubmissionUpdated(id) => {
+            if let Some(cid) = contest_id {
+                reload_submissions().await;
+                reload_leaderboard(cid).await;
+                let state = STATE.read();
+                let result = state
+                    .submissions
+                    .iter()
+                    .find(|s| s.id == *id)
+                    .map(|s| (s.verdict.clone(), s.score));
+                drop(state);
+                // Промежуточные Compiling/Testing не показываем: иначе на каждую
+                // посылку прилетает по три тоста.
+                match result {
+                    Some((TestingVerdict::PartialSolution, score)) => Some(i18n::tr(
+                        &lang,
+                        &format!("Посылка #{id}: Частичное решение ({score} баллов)"),
+                        &format!("Submission #{id}: Partial solution ({score} points)"),
+                    )),
+                    Some((
+                        verdict @ (TestingVerdict::Ok
+                        | TestingVerdict::CompilationError
+                        | TestingVerdict::Fail),
+                        _,
+                    )) => {
+                        let ru = verdict_label("ru", &verdict);
+                        let en = verdict_label("en", &verdict);
+                        Some(i18n::tr(
+                            &lang,
+                            &format!("Посылка #{id}: {ru}"),
+                            &format!("Submission #{id}: {en}"),
+                        ))
+                    }
+                    _ => None,
+                }
+            } else {
+                None
+            }
         }
         ContestsEvent::NewProblemQuestion(id) => {
             if let Some(cid) = contest_id {

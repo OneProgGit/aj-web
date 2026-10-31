@@ -125,20 +125,12 @@ pub fn Submissions(props: SubmissionsProps) -> Element {
                                     span { class: "label-text", "{i18n::tr(&lang, \"все посылки\", \"all submissions\")}" }
                                 }
                             }
-                            button {
-                                class: "btn btn-ghost btn-sm gap-1",
-                                disabled: pending(),
-                                onclick: move |_| reload(),
-                                {icon_element(Icon::Update, 14)}
-                                span { "{i18n::tr(&lang, \"обновить\", \"reload\")}" }
-                            }
                         }
                     }
 
-                    // Пока идёт перезагрузка (переключатель «все посылки» или
-                    // кнопка «обновить»), на месте таблицы показываем Loading:
-                    // старые посылки при смене режима нерелевантны, и таблица
-                    // с ними только путает.
+                    // While reloading (the «all submissions» toggle), show
+                    // Loading instead of the table: the old submissions are
+                    // irrelevant after a mode switch and only confuse.
                     if pending() {
                         Loading {}
                     } else if submissions.is_empty() {

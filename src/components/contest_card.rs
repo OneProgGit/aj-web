@@ -218,14 +218,14 @@ pub fn ContestCard(props: ContestCardProps) -> Element {
                         if let Some(starts_at) = contest.starts_at {
                             DateTimeText { time: starts_at, class: "text-sm italic font-semibold text-right" }
                         } else {
-                            span { class: "text-sm italic font-semibold text-right", "TBA" }
+                            span { class: "text-sm italic font-semibold text-right", "—" }
                         }
                     }
                     div { class: "flex items-center justify-between gap-4",
                         span { class: "text-sm", "{i18n::tr(&lang, \"осталось\", \"remaining\")}" }
                         span { class: "text-sm italic font-semibold",
                             {contest.finishes_at.map_or_else(
-                                || "TBA".to_string(),
+                                || "—".to_string(),
                                 |finishes_at| format_remaining(&lang, finishes_at - now()),
                             )}
                         }
@@ -236,7 +236,7 @@ pub fn ContestCard(props: ContestCardProps) -> Element {
                         if let Some(starts_at) = contest.starts_at {
                             DateTimeText { time: starts_at, class: "text-sm italic font-semibold text-right" }
                         } else {
-                            span { class: "text-sm italic font-semibold text-right", "TBA" }
+                            span { class: "text-sm italic font-semibold text-right", "—" }
                         }
                     }
                     div { class: "flex items-center justify-between gap-4",
@@ -244,7 +244,7 @@ pub fn ContestCard(props: ContestCardProps) -> Element {
                         span { class: "text-sm italic font-semibold",
                             {match (contest.starts_at, contest.finishes_at) {
                                 (Some(starts_at), Some(finishes_at)) => format_duration(&lang, finishes_at - starts_at),
-                                _ => "TBA".to_string(),
+                                _ => "—".to_string(),
                             }}
                         }
                     }
@@ -254,7 +254,7 @@ pub fn ContestCard(props: ContestCardProps) -> Element {
                         span { class: "text-sm italic font-semibold",
                             {match (contest.starts_at, contest.finishes_at) {
                                 (Some(starts_at), Some(finishes_at)) => format_duration(&lang, finishes_at - starts_at),
-                                _ => "TBA".to_string(),
+                                _ => "—".to_string(),
                             }}
                         }
                     }

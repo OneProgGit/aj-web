@@ -248,25 +248,38 @@ fn SubmissionDetail(props: SubmissionDetailProps) -> Element {
         };
         format!("```{fence}\n{src}\n```")
     });
+    let compilation_error = submission.verdict == TestingVerdict::CompilationError;
+    let compilation_log = submission.compilation_log.trim().to_owned();
+    // У ошибки компиляции нет ни подгрупп, ни тестов, поэтому вместо них
+    // показывается лог компилятора, а вкладка с кодом сдвигается на 0.
+    let code_tab = if compilation_error { 1 } else { 2 };
 
     rsx! {
         div { class: "w-full mt-3",
             div { class: "tabs tabs-box mb-3 w-fit",
-                button {
-                    class: if tab() == 0 { "tab tab-active" } else { "tab" },
-                    onclick: move |_| tab.set(0),
-                    "{i18n::tr(&lang, \"результаты подгрупп\", \"subgroup results\")}"
-                }
-                button {
-                    class: if tab() == 1 { "tab tab-active" } else { "tab" },
-                    onclick: move |_| tab.set(1),
-                    "{i18n::tr(&lang, \"результаты тестов\", \"test results\")}"
+                if compilation_error {
+                    button {
+                        class: if tab() == 0 { "tab tab-active" } else { "tab" },
+                        onclick: move |_| tab.set(0),
+                        "{i18n::tr(&lang, \"лог компилятора\", \"compiler log\")}"
+                    }
+                } else {
+                    button {
+                        class: if tab() == 0 { "tab tab-active" } else { "tab" },
+                        onclick: move |_| tab.set(0),
+                        "{i18n::tr(&lang, \"результаты подгрупп\", \"subgroup results\")}"
+                    }
+                    button {
+                        class: if tab() == 1 { "tab tab-active" } else { "tab" },
+                        onclick: move |_| tab.set(1),
+                        "{i18n::tr(&lang, \"результаты тестов\", \"test results\")}"
+                    }
                 }
                 if show_code {
                     button {
-                        class: if tab() == 2 { "tab tab-active" } else { "tab" },
+                        class: if tab() == code_tab { "tab tab-active" } else { "tab" },
                         onclick: move |_| {
-                            tab.set(2);
+                            tab.set(code_tab);
                             if code().is_none() {
                                 let token = STATE.read().token.clone();
                                 let sid = submission.id;
@@ -294,7 +307,15 @@ fn SubmissionDetail(props: SubmissionDetailProps) -> Element {
             }
 
             div { class: "flex flex-col gap-2",
-                if tab() == 0 {
+                if tab() == 0 && compilation_error {
+                    if compilation_log.is_empty() {
+                        p { class: "italic", "{i18n::tr(&lang, \"Лог компилятора пуст\", \"Compiler log is empty\")}" }
+                    } else {
+                        div { class: "md-code-scroll",
+                            Markdown { text: format!("```\n{compilation_log}\n```") }
+                        }
+                    }
+                } else if tab() == 0 {
                     div { class: "flex flex-col gap-2 max-h-96 overflow-y-auto",
                     for (i, r) in submission.subgroups_results.iter().enumerate() {
                         div { class: "bg-base-300 rounded p-4 text-base-content",

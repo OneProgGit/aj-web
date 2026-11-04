@@ -330,7 +330,7 @@ fn SubmissionDetail(props: SubmissionDetailProps) -> Element {
                         }
                     }
                     }
-                } else if tab() == 1 {
+                } else if tab() == 1 && !compilation_error {
                     div { class: "flex flex-col gap-2 max-h-96 overflow-y-auto",
                     for (i, t) in submission.tests_results.iter().enumerate() {
                         div { class: "bg-base-300 rounded p-4 text-base-content",

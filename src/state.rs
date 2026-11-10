@@ -303,3 +303,30 @@ pub fn load_tab() -> u8 {
         .filter(|v| *v <= 4)
         .unwrap_or(0)
 }
+
+const INTENDED_PATH_KEY: &str = "aj_web_intended_path";
+
+/// Запомнить адрес, на который пользователь шёл по ссылке, но был отправлен
+/// на вход: после успешного входа вернём туда же, а не на главную.
+///
+/// sessionStorage, а не localStorage: намерение относится к текущей вкладке.
+/// С общим хранилищем вход во второй вкладке уводил бы её на ссылку из первой.
+pub fn save_intended_path(path: &str) {
+    let window = web_sys::window();
+    let Some(storage) = window.and_then(|w| w.session_storage().ok().flatten()) else {
+        return;
+    };
+    let _ = storage.set_item(INTENDED_PATH_KEY, path);
+}
+
+/// Забрать намерение. Оно одноразовое: без удаления следующий обычный вход
+/// снова уводил бы на старую ссылку вместо главной.
+#[must_use]
+pub fn take_intended_path() -> Option<String> {
+    let window = web_sys::window();
+    let storage = window.and_then(|w| w.session_storage().ok().flatten())?;
+    let path = storage.get_item(INTENDED_PATH_KEY).ok().flatten()?;
+    let _ = storage.remove_item(INTENDED_PATH_KEY);
+    // «На главную» — это и есть корень: возвращаться туда незачем.
+    (!path.is_empty() && path != "/").then_some(path)
+}

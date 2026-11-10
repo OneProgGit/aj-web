@@ -62,6 +62,21 @@ fn is_guarded(route: &Route) -> bool {
     )
 }
 
+/// Адрес из браузерной строки: путь + query + hash. Нужен целиком, а не
+/// `Route::to_string()`: параметры вроде `?tab=submissions` — часть ссылки,
+/// на которую пользователь вернётся после входа.
+fn current_path() -> String {
+    let Some(location) = web_sys::window().map(|w| w.location()) else {
+        return String::new();
+    };
+    format!(
+        "{}{}{}",
+        location.pathname().unwrap_or_default(),
+        location.search().unwrap_or_default(),
+        location.hash().unwrap_or_default()
+    )
+}
+
 /// Layout wrapping every route. Runs the auth guard (redirects away from
 /// guarded routes when logged out and away from Welcome when logged in).
 /// Must live inside `Router`, so it is a layout rather than part of `App`.
@@ -93,6 +108,9 @@ fn GuardLayout() -> Element {
         &(location.clone(), logged_in),
         move |(route, logged_in)| {
             if is_guarded(&route) && !logged_in {
+                // Запоминаем, куда пользователь шёл: после входа вернём на эту
+                // же ссылку (см. `Login`), а не на главную.
+                crate::state::save_intended_path(&current_path());
                 let _ = navigator.replace(Route::Welcome {});
             } else if matches!(route, Route::Welcome {}) && logged_in {
                 let _ = navigator.replace(Route::Home {});

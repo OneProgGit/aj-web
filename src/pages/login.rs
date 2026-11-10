@@ -66,7 +66,18 @@ pub fn Login() -> Element {
                                         Ok(me) => {
                                             STATE.write().user = Some(me);
                                             busy.set(false);
-                                            nav.push(crate::Route::Home {});
+                                            // Возвращаемся на ссылку, с которой
+                                            // пользователя отправили на вход;
+                                            // заменой, чтобы «назад» не привело
+                                            // снова на форму логина.
+                                            match crate::state::take_intended_path() {
+                                                Some(path) => {
+                                                    let _ = nav.replace(path);
+                                                }
+                                                None => {
+                                                    let _ = nav.push(crate::Route::Home {});
+                                                }
+                                            }
                                         }
                                         Err(e) => {
                                             busy.set(false);

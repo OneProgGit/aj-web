@@ -13,7 +13,10 @@ use dioxus::router::Link;
 
 use crate::{
     alerts::AlertHost,
-    components::users_ws::{own_profile_ws, unsubscribe_own_profile_ws},
+    components::{
+        compiler_error::CompilerErrorHost,
+        users_ws::{own_profile_ws, unsubscribe_own_profile_ws},
+    },
     models::users::UsersEvent,
     pages::{
         account_profile::Account, contest::Contest, home::Home, login::Login, problems::Problems,
@@ -323,5 +326,6 @@ pub fn App() -> Element {
             Router::<Route> {}
         }
         AlertHost {}
+        CompilerErrorHost {}
     }
 }

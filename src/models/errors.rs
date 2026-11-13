@@ -40,8 +40,15 @@ pub fn describe_error(error: &AdaJudgeError) -> String {
                 "Неверный или отсутствующий владелец",
                 "Invalid or missing owner",
             ),
-            InvalidProblem::CheckerCompilationError => {
+            InvalidProblem::CheckerCompilationError { error } if error.trim().is_empty() => {
                 tr("Ошибка компиляции чекера", "Checker compilation error")
+            }
+            InvalidProblem::CheckerCompilationError { error } => {
+                if lang == "en" {
+                    format!("Checker compilation error: {error}")
+                } else {
+                    format!("Ошибка компиляции чекера: {error}")
+                }
             }
         },
         AdaJudgeError::InvalidJwt => tr("Неверный токен", "Invalid token"),

@@ -1,6 +1,7 @@
 pub mod admin_badge;
 pub mod alert;
 pub mod back_button;
+pub mod compiler_error;
 pub mod contest_card;
 pub mod contest_form;
 pub mod contest_ws;

@@ -4,6 +4,25 @@ use crate::{
 };
 use reqwest::{Method, StatusCode};
 
+/// Error of problem archive creation/update. Checker compilation failures are
+/// kept separate so the UI can show the compiler log as a copyable code block.
+#[derive(Clone, Debug)]
+pub enum ProblemArchiveError {
+    Message(String),
+    CheckerCompilation(String),
+}
+
+fn from_ada_judge(error: crate::models::errors::AdaJudgeError) -> ProblemArchiveError {
+    use crate::models::errors::{AdaJudgeError, InvalidProblem};
+
+    match error {
+        AdaJudgeError::InvalidProblem(InvalidProblem::CheckerCompilationError { error }) => {
+            ProblemArchiveError::CheckerCompilation(error)
+        }
+        error => ProblemArchiveError::Message(crate::models::errors::describe_error(&error)),
+    }
+}
+
 pub async fn get_contest_problems(
     contest_id: i64,
     token: &Option<String>,
@@ -42,7 +61,7 @@ pub async fn create_contest_problem(
     problem_index: i64,
     archive_bytes: Vec<u8>,
     token: &Option<String>,
-) -> Result<(), String> {
+) -> Result<(), ProblemArchiveError> {
     let form = reqwest::multipart::Form::new()
         .part(
             "problem_index",
@@ -62,21 +81,21 @@ pub async fn create_contest_problem(
         req = req.header("Authorization", auth);
     }
     let res = req.send().await.map_err(|e| {
-        format!(
+        ProblemArchiveError::Message(format!(
             "{}: {e}",
             crate::i18n::tr(&crate::state::language(), "Сетевая ошибка", "Network error")
-        )
+        ))
     })?;
     if res.status().is_success() {
         Ok(())
     } else {
         let error: crate::models::errors::AdaJudgeError = res.json().await.map_err(|e| {
-            format!(
+            ProblemArchiveError::Message(format!(
                 "{}: {e}",
                 crate::i18n::tr(&crate::state::language(), "Ошибка сервера", "Server error")
-            )
+            ))
         })?;
-        Err(crate::models::errors::describe_error(&error))
+        Err(from_ada_judge(error))
     }
 }
 
@@ -87,7 +106,7 @@ pub async fn update_problem(
     problem_index: i64,
     archive_bytes: Vec<u8>,
     token: &Option<String>,
-) -> Result<(), String> {
+) -> Result<(), ProblemArchiveError> {
     let form = reqwest::multipart::Form::new()
         .part(
             "problem_index",
@@ -104,21 +123,21 @@ pub async fn update_problem(
         req = req.header("Authorization", auth);
     }
     let res = req.send().await.map_err(|e| {
-        format!(
+        ProblemArchiveError::Message(format!(
             "{}: {e}",
             crate::i18n::tr(&crate::state::language(), "Сетевая ошибка", "Network error")
-        )
+        ))
     })?;
     if res.status().is_success() {
         Ok(())
     } else {
         let error: crate::models::errors::AdaJudgeError = res.json().await.map_err(|e| {
-            format!(
+            ProblemArchiveError::Message(format!(
                 "{}: {e}",
                 crate::i18n::tr(&crate::state::language(), "Ошибка сервера", "Server error")
-            )
+            ))
         })?;
-        Err(crate::models::errors::describe_error(&error))
+        Err(from_ada_judge(error))
     }
 }
 

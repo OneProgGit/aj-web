@@ -258,7 +258,7 @@ fn add_problem_button(contest: PublicContestConfig, problems: Vec<PublicProblemC
                                                 archive.set(None);
                                                 load_contest_state(contest_id, 0, false, true).await;
                                             }
-                                            Err(e) => show_alert(AlertKind::Error, e),
+                                            Err(e) => crate::components::compiler_error::show_problem_archive_error(e),
                                         }
                                     });
                                 }

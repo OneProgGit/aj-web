@@ -316,7 +316,7 @@ pub fn ProblemCard(props: ProblemCardProps) -> Element {
                                                     crate::alerts::show_alert(crate::alerts::AlertKind::Info, crate::i18n::tr(&crate::state::language(), "Задача обновлена", "Problem updated"));
                                                     on_changed.call(());
                                                 }
-                                                Err(e) => crate::alerts::show_alert(crate::alerts::AlertKind::Error, e),
+                                                Err(e) => crate::components::compiler_error::show_problem_archive_error(e),
                                             }
                                             // Сбрасываем в обеих ветках: иначе при ошибке
                                             // кнопка останется задизейбленной со спиннером.

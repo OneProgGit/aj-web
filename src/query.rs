@@ -103,6 +103,98 @@ impl fmt::Display for ContestQuery {
     }
 }
 
+/// Status filter on the contest list. `All` means no filtering.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum ContestFilter {
+    #[default]
+    All,
+    BeforeStart,
+    Ongoing,
+    Finished,
+    Upsolving,
+}
+
+impl ContestFilter {
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::All => "all",
+            Self::BeforeStart => "before-start",
+            Self::Ongoing => "ongoing",
+            Self::Finished => "finished",
+            Self::Upsolving => "upsolving",
+        }
+    }
+
+    fn parse(value: &str) -> Self {
+        match value {
+            "before-start" => Self::BeforeStart,
+            "ongoing" => Self::Ongoing,
+            "finished" => Self::Finished,
+            "upsolving" => Self::Upsolving,
+            _ => Self::All,
+        }
+    }
+
+    #[must_use]
+    pub const fn status(self) -> Option<crate::state::ContestStatus> {
+        match self {
+            Self::All => None,
+            Self::BeforeStart => Some(crate::state::ContestStatus::BeforeStart),
+            Self::Ongoing => Some(crate::state::ContestStatus::Ongoing),
+            Self::Finished => Some(crate::state::ContestStatus::Finished),
+            Self::Upsolving => Some(crate::state::ContestStatus::Upsolving),
+        }
+    }
+}
+
+/// State of the contest list.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct HomeQuery {
+    pub all: bool,
+    pub status: ContestFilter,
+}
+
+impl Default for HomeQuery {
+    fn default() -> Self {
+        Self {
+            all: true,
+            status: ContestFilter::All,
+        }
+    }
+}
+
+impl From<&str> for HomeQuery {
+    fn from(query: &str) -> Self {
+        let mut state = Self::default();
+        let query = query.strip_prefix('?').unwrap_or(query);
+
+        for pair in query.split('&').filter(|pair| !pair.is_empty()) {
+            let Some((key, value)) = pair.split_once('=') else {
+                continue;
+            };
+            match key {
+                "all" => state.all = parse_bool(value),
+                "status" => state.status = ContestFilter::parse(value),
+                _ => {}
+            }
+        }
+
+        state
+    }
+}
+
+impl fmt::Display for HomeQuery {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "all={}&status={}",
+            u8::from(self.all),
+            self.status.as_str()
+        )
+    }
+}
+
 /// State of the global problems feed.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct ProblemsQuery {
@@ -132,7 +224,7 @@ fn parse_bool(value: &str) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::{ContestQuery, ContestTab, ProblemsQuery};
+    use super::{ContestFilter, ContestQuery, ContestTab, HomeQuery, ProblemsQuery};
 
     #[test]
     fn contest_query_round_trip() {
@@ -159,6 +251,18 @@ mod tests {
         assert_eq!(query.problem, Some(7));
         assert!(!query.all);
         assert_eq!(ContestQuery::default().to_string(), "tab=main");
+    }
+
+    #[test]
+    fn home_query_round_trip() {
+        let query = HomeQuery {
+            all: false,
+            status: ContestFilter::Ongoing,
+        };
+        assert_eq!(query.to_string(), "all=0&status=ongoing");
+        assert_eq!(HomeQuery::from(query.to_string().as_str()), query);
+        assert!(HomeQuery::default().all);
+        assert_eq!(HomeQuery::default().status, ContestFilter::All);
     }
 
     #[test]

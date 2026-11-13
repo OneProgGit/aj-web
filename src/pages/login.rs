@@ -75,7 +75,7 @@ pub fn Login() -> Element {
                                                     let _ = nav.replace(path);
                                                 }
                                                 None => {
-                                                    let _ = nav.push(crate::Route::Home {});
+                                                    let _ = nav.push(crate::Route::Home { query: crate::query::HomeQuery::default() });
                                                 }
                                             }
                                         }

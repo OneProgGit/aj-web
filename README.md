@@ -108,8 +108,10 @@ reloaded without losing the current view:
 | `lang=0..5`   | submission language (Rust, C, C++, Go, Python, Pascal)          |
 | `paste=1`     | paste solution as text instead of choosing a file              |
 
-The problems page uses `?all=1` for the "all problems" toggle. Defaults are
-spelled out in the URL (`?tab=main`, `?all=0`) so every view has a canonical
+The contests page uses `?all=0|1&status=...` where status is one of `all`,
+`ongoing`, `before-start`, `finished`, `upsolving`. The problems page uses
+`?all=1` for the "all problems" toggle. Defaults are spelled out in the URL
+(`?tab=main`, `?all=1&status=all`, `?all=0`) so every view has a canonical
 address.
 
 ## Layout

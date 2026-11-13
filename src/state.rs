@@ -79,7 +79,6 @@ pub struct GlobalState {
     pub contests: Vec<PublicContestConfig>,
     #[allow(dead_code)]
     pub my_contests: Vec<PublicContestConfig>,
-    pub contests_is_all: bool,
     pub contest_problems: Vec<PublicProblemConfig>,
     pub posts: Vec<ContestPost>,
     pub questions: Vec<ProblemQuestion>,
@@ -102,7 +101,6 @@ impl GlobalState {
         Self {
             token: load_token(),
             language: load_language(),
-            contests_is_all: true,
             ..Self::default()
         }
     }

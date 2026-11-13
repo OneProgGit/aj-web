@@ -12,7 +12,8 @@ use crate::{
     },
     i18n,
     models::contests::ContestRequest,
-    state::{ContestStatus, STATE, contest_status},
+    query::{ContestFilter, HomeQuery},
+    state::{STATE, contest_status},
 };
 
 /// Loads contest/user data, mirroring aj-app's `load_all`.
@@ -49,21 +50,19 @@ async fn reload_data(all_contests: bool, force_contests: bool, force_users: bool
 }
 
 #[component]
-pub fn Home() -> Element {
+pub fn Home(query: HomeQuery) -> Element {
     let lang = crate::state::language();
+    let navigator = use_navigator();
     let mut modal_open = use_signal(|| false);
-    // started — запрос пошёл (ровно один раз), loading — он ещё идёт.
-    let mut started = use_signal(|| false);
+    // loading — запрос ещё идёт; loaded_for — для какого all он уже выполнен.
     let mut loading = use_signal(|| false);
-    // Фильтр по статусу: None — показывать все, как отдаёт сервер.
-    let status_filter = use_signal(|| None::<ContestStatus>);
+    let mut loaded_for = use_signal(|| None::<bool>);
 
-    if !started() {
-        started.set(true);
+    if loaded_for() != Some(query.all) {
+        loaded_for.set(Some(query.all));
         loading.set(true);
         spawn(async move {
-            let all = STATE.read().contests_is_all;
-            reload_data(all, true, true).await;
+            reload_data(query.all, true, true).await;
             loading.set(false);
         });
     }
@@ -74,12 +73,13 @@ pub fn Home() -> Element {
         .read()
         .contests
         .iter()
-        .filter(|c| match status_filter() {
+        .filter(|c| match query.status.status() {
             Some(want) => contest_status(c) == want,
             None => true,
         })
         .cloned()
         .collect();
+
     rsx! {
         div { class: "flex flex-col items-start gap-4 max-w-7xl mx-auto w-full",
             div { class: "flex gap-4 items-center",
@@ -97,37 +97,22 @@ pub fn Home() -> Element {
 
             if STATE.read().is_admin() {
                 label { class: "label cursor-pointer justify-start gap-2",
-                input {
-                    r#type: "checkbox",
-                    class: "toggle toggle-sm",
-                    checked: STATE.read().contests_is_all,
-                    // Пока идёт перезагрузка списка, переключатель гасим:
-                    // иначе можно дёрнуть его второй раз и получить
-                    // два конкурирующих запроса — какой ответ придёт последним,
-                    // тот и победит, а значение тумблера может не совпасть
-                    // с показанным списком.
-                    disabled: loading(),
-                    onchange: move |ev| {
-                        let new_value = ev.checked();
-                        STATE.write().contests_is_all = new_value;
-                        let token = crate::state::token();
-                        loading.set(true);
-                        spawn(async move {
-                            let res = if new_value {
-                                api::contests::get_contests(&token).await
-                            } else {
-                                api::contests::get_my_contests(&token).await
-                            };
-                            loading.set(false);
-                            match res {
-                                Ok(list) => STATE.write().contests = list,
-                                Err(e) => show_alert(AlertKind::Error, e),
-                            }
-                        });
-                    },
+                    input {
+                        r#type: "checkbox",
+                        class: "toggle toggle-sm",
+                        checked: query.all,
+                        disabled: loading(),
+                        onchange: move |ev| {
+                            let _ = navigator.replace(crate::Route::Home {
+                                query: HomeQuery {
+                                    all: ev.checked(),
+                                    status: query.status,
+                                },
+                            });
+                        },
+                    }
+                    span { class: "label-text", "{i18n::tr(&lang, \"все контесты\", \"all contests\")}" }
                 }
-                span { class: "label-text", "{i18n::tr(&lang, \"все контесты\", \"all contests\")}" }
-            }
             }
 
             if loading() {
@@ -138,18 +123,17 @@ pub fn Home() -> Element {
                 div { class: "flex flex-wrap items-center gap-2",
                     // Порядок серверный (id desc) — сортировки нет, только фильтр.
                     for option in [
-                        None,
-                        Some(ContestStatus::Ongoing),
-                        Some(ContestStatus::BeforeStart),
-                        Some(ContestStatus::Upsolving),
-                        Some(ContestStatus::Finished),
+                        ContestFilter::All,
+                        ContestFilter::Ongoing,
+                        ContestFilter::BeforeStart,
+                        ContestFilter::Upsolving,
+                        ContestFilter::Finished,
                     ] {
                         {
-                            let mut filter = status_filter;
-                            let active = status_filter() == option;
-                            let title = match option {
+                            let active = query.status == option;
+                            let title = match option.status() {
                                 None => i18n::tr(&lang, "все", "all"),
-                                Some(st) => st.label(&lang),
+                                Some(status) => status.label(&lang),
                             };
                             rsx! {
                                 button {
@@ -158,7 +142,14 @@ pub fn Home() -> Element {
                                     } else {
                                         "btn btn-sm btn-ghost"
                                     },
-                                    onclick: move |_| filter.set(option),
+                                    onclick: move |_| {
+                                        let _ = navigator.replace(crate::Route::Home {
+                                            query: HomeQuery {
+                                                all: query.all,
+                                                status: option,
+                                            },
+                                        });
+                                    },
                                     "{title}"
                                 }
                             }
@@ -179,7 +170,7 @@ pub fn Home() -> Element {
                             show_enter: true,
                             compact: false,
                             on_changed: move |_| {
-                                let all = STATE.read().contests_is_all;
+                                let all = query.all;
                                 spawn(async move {
                                     reload_data(all, true, false).await;
                                 });

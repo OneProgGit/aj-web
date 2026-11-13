@@ -581,7 +581,7 @@ pub fn Contest(contest_id: i64, query: ContestQuery) -> Element {
             div { class: "flex flex-wrap gap-4 items-center",
                 button {
                     class: "btn btn-ghost btn-sm gap-2",
-                    onclick: move |_| { let _ = navigator.push(crate::Route::Home {}); },
+                    onclick: move |_| { let _ = navigator.push(crate::Route::Home { query: crate::query::HomeQuery::default() }); },
                     {icon_element(Icon::Back, 16)}
                     span { "{i18n::tr(&lang, \"назад\", \"back\")}" }
                 }

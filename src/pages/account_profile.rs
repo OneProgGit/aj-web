@@ -27,7 +27,7 @@ pub fn Account() -> Element {
     let Some(user) = user else {
         return rsx! {
             div { class: "flex flex-col items-start gap-4 max-w-7xl mx-auto w-full",
-                button { class: "btn btn-ghost btn-sm gap-2", onclick: move |_| { let _ = navigator.push(crate::Route::Home {}); },                     {icon_element(Icon::Back, 16)}, span { "{i18n::tr(&lang, \"назад\", \"back\")}" } }
+                button { class: "btn btn-ghost btn-sm gap-2", onclick: move |_| { let _ = navigator.push(crate::Route::Home { query: crate::query::HomeQuery::default() }); },                     {icon_element(Icon::Back, 16)}, span { "{i18n::tr(&lang, \"назад\", \"back\")}" } }
                 if STATE.read().token.is_some() {
                     Loading {}
                 } else {

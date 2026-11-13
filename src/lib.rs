@@ -24,7 +24,7 @@ use crate::{
         register::Register, user_private_profile::UserPrivateProfile, user_profile::UserProfile,
         users::Users, welcome::Welcome,
     },
-    query::{ContestQuery, ProblemsQuery},
+    query::{ContestQuery, HomeQuery, ProblemsQuery},
     state::STATE,
 };
 
@@ -37,8 +37,8 @@ enum Route {
     Login {},
     #[route("/register")]
     Register {},
-    #[route("/home")]
-    Home {},
+    #[route("/home?:..query")]
+    Home { query: HomeQuery },
     #[route("/contest/:contest_id?:..query")]
     Contest {
         contest_id: i64,
@@ -99,7 +99,7 @@ fn GuardLayout() -> Element {
         Route::Welcome {} => i18n::tr(&lang, "Добро пожаловать — ada-judge", "Welcome — ada-judge"),
         Route::Login {} => i18n::tr(&lang, "Вход — ada-judge", "Login — ada-judge"),
         Route::Register {} => i18n::tr(&lang, "Регистрация — ada-judge", "Register — ada-judge"),
-        Route::Home {} => i18n::tr(&lang, "Контесты — ada-judge", "Contests — ada-judge"),
+        Route::Home { .. } => i18n::tr(&lang, "Контесты — ada-judge", "Contests — ada-judge"),
         Route::Contest { contest_id, .. } => i18n::tr(
             &lang,
             &format!("Контест #{contest_id} — ada-judge"),
@@ -121,7 +121,9 @@ fn GuardLayout() -> Element {
                 crate::state::save_intended_path(&current_path());
                 let _ = navigator.replace(Route::Welcome {});
             } else if matches!(route, Route::Welcome {}) && logged_in {
-                let _ = navigator.replace(Route::Home {});
+                let _ = navigator.replace(Route::Home {
+                    query: HomeQuery::default(),
+                });
             }
         },
     ));
@@ -149,8 +151,8 @@ fn GuardLayout() -> Element {
                     // рядом на всю ширину; на sm+ возвращаются в общий ряд.
                     div { class: "tabs tabs-box max-w-full overflow-x-auto order-last w-full sm:order-none sm:w-auto",
                         Link {
-                            to: Route::Home {},
-                            class: if matches!(&location, Route::Home {} | Route::Contest { .. }) { "tab gap-2 tab-active" } else { "tab gap-2" },
+                            to: Route::Home { query: HomeQuery::default() },
+                            class: if matches!(&location, Route::Home { .. } | Route::Contest { .. }) { "tab gap-2 tab-active" } else { "tab gap-2" },
                             {crate::components::icon::icon_element(crate::components::icon::Icon::Home, 16)}
                             span { "{i18n::tr(&lang, \"главная\", \"home\")}" }
                         }
@@ -337,8 +339,8 @@ pub fn App() -> Element {
 
 #[cfg(test)]
 mod tests {
-    use super::{ContestQuery, ProblemsQuery, Route};
-    use crate::query::ContestTab;
+    use super::{ContestQuery, HomeQuery, ProblemsQuery, Route};
+    use crate::query::{ContestFilter, ContestTab};
 
     #[test]
     fn contest_route_round_trips_query() {
@@ -365,6 +367,18 @@ mod tests {
             query: ContestQuery::default(),
         };
         assert_eq!(route.to_string(), "/contest/1?tab=main");
+    }
+
+    #[test]
+    fn home_route_round_trips_filter() {
+        let route = Route::Home {
+            query: HomeQuery {
+                all: false,
+                status: ContestFilter::Ongoing,
+            },
+        };
+        assert_eq!(route.to_string(), "/home?all=0&status=ongoing");
+        assert_eq!(route.to_string().parse::<Route>().unwrap(), route);
     }
 
     #[test]

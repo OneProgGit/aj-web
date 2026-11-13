@@ -274,6 +274,9 @@ async fn handle_feed_event(event: ContestsEvent) {
 
 async fn handle_event(contest_id: Option<i64>, event: ContestsEvent) {
     let lang = crate::state::language();
+    // Своё изменение задачи уже показало локальное уведомление, а ws-событие
+    // приходит его эхом. Гасим только тост, данные всё равно перечитываются.
+    let own_problem_change = crate::components::ws::is_self_echo("problems");
     // В фиде (контекста контеста нет) — только членство списка.
     let notice = match &event {
         ContestsEvent::NewPost(id) => {
@@ -376,37 +379,49 @@ async fn handle_event(contest_id: Option<i64>, event: ContestsEvent) {
             if let Some(cid) = contest_id {
                 reload_problems(cid).await;
             }
-            contest_id.map(|_| {
-                i18n::tr(
-                    &lang,
-                    &format!("Новая задача #{id}"),
-                    &format!("New problem #{id}"),
-                )
-            })
+            if own_problem_change {
+                None
+            } else {
+                contest_id.map(|_| {
+                    i18n::tr(
+                        &lang,
+                        &format!("Новая задача #{id}"),
+                        &format!("New problem #{id}"),
+                    )
+                })
+            }
         }
         ContestsEvent::ProblemUpdated(id) => {
             if let Some(cid) = contest_id {
                 reload_problems(cid).await;
             }
-            contest_id.map(|_| {
-                i18n::tr(
-                    &lang,
-                    &format!("Задача #{id} обновлена"),
-                    &format!("Problem #{id} updated"),
-                )
-            })
+            if own_problem_change {
+                None
+            } else {
+                contest_id.map(|_| {
+                    i18n::tr(
+                        &lang,
+                        &format!("Задача #{id} обновлена"),
+                        &format!("Problem #{id} updated"),
+                    )
+                })
+            }
         }
         ContestsEvent::ProblemDeleted(id) => {
             if let Some(cid) = contest_id {
                 reload_problems(cid).await;
             }
-            contest_id.map(|_| {
-                i18n::tr(
-                    &lang,
-                    &format!("Задача #{id} удалена"),
-                    &format!("Problem #{id} deleted"),
-                )
-            })
+            if own_problem_change {
+                None
+            } else {
+                contest_id.map(|_| {
+                    i18n::tr(
+                        &lang,
+                        &format!("Задача #{id} удалена"),
+                        &format!("Problem #{id} deleted"),
+                    )
+                })
+            }
         }
         // Посылки: в 0.10.13 по ним приходят отдельные события, раньше список
         // обновлялся только по кнопке. В контексте контеста перечитываем список

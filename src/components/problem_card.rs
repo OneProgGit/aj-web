@@ -306,17 +306,21 @@ pub fn ProblemCard(props: ProblemCardProps) -> Element {
                                         let token = token.clone();
                                         updating.set(true);
                                         spawn(async move {
-                                            crate::components::ws::mark_self_action("problems");
+                                            crate::components::ws::begin_problem_action();
                                             // Номер в UI 1-based, сервер ждёт 0-based.
                                             let problem_index = problem_index_zero_based(number());
                                             match api::problems::update_problem(pid, problem_index, bytes, &token).await {
                                                 Ok(()) => {
+                                                    crate::components::ws::finish_problem_action();
                                                     picked_archive.set(None);
                                                     admin_open.set(false);
                                                     crate::alerts::show_alert(crate::alerts::AlertKind::Info, crate::i18n::tr(&crate::state::language(), "Задача обновлена", "Problem updated"));
                                                     on_changed.call(());
                                                 }
-                                                Err(e) => crate::components::compiler_error::show_problem_archive_error(e),
+                                                Err(e) => {
+                                                    crate::components::ws::cancel_problem_action();
+                                                    crate::components::compiler_error::show_problem_archive_error(e);
+                                                }
                                             }
                                             // Сбрасываем в обеих ветках: иначе при ошибке
                                             // кнопка останется задизейбленной со спиннером.
@@ -345,15 +349,19 @@ pub fn ProblemCard(props: ProblemCardProps) -> Element {
                             let pid = problem.id;
                             let request = DeletionRequest { login, password, deletion_confirmation: confirm };
                             spawn(async move {
-                                crate::components::ws::mark_self_action("problems");
+                                crate::components::ws::begin_problem_action();
                                 match api::problems::delete_problem(pid, &request, &token).await {
                                     Ok(()) => {
+                                        crate::components::ws::finish_problem_action();
                                         deleting.set(false);
                                         admin_open.set(false);
                                         crate::alerts::show_alert(crate::alerts::AlertKind::Info, crate::i18n::tr(&crate::state::language(), "Задача удалена", "Problem deleted"));
                                         on_changed.call(());
                                     }
-                                    Err(e) => crate::alerts::show_alert(crate::alerts::AlertKind::Error, e),
+                                    Err(e) => {
+                                        crate::components::ws::cancel_problem_action();
+                                        crate::alerts::show_alert(crate::alerts::AlertKind::Error, e);
+                                    }
                                 }
                             });
                         },

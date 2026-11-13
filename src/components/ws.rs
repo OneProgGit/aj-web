@@ -113,23 +113,53 @@ pub fn unsubscribe_ws(key: &str) {
 ///
 /// Событие, пришедшее следом за собственным изменением, — это его эхо:
 /// свой тост обработчик уже показал, а повтор из ленты — дубль. Данные при
-/// этом обновляются как обычно, глушится только уведомление. Окно в 3 секунды:
-/// чужое событие внутри него тоже замьютится, но состояние всё равно
-/// обновится — пострадает только тост, что приемлемо.
-// Метки — миллисекунды `js_sys::Date::now()`, а НЕ `std::time::Instant`:
-// Instant на wasm32-unknown-unknown не реализован и паникует
-// ("time not implemented on this platform"), а непойманная паника в wasm
-// убивает инстанс целиком — вкладка виснет. Тот же приём уже используется
-// в alerts.rs для дедупликации тостов.
+/// этом обновляются как обычно, глушится только уведомление. По умолчанию
+/// окно 3 секунды: чужое событие внутри него тоже замьютится, но состояние
+/// всё равно обновится — пострадает только тост, что приемлемо.
+// Значение — момент истечения окна в миллисекундах `js_sys::Date::now()`,
+// а НЕ `std::time::Instant`: Instant на wasm32-unknown-unknown не реализован
+// и паникует ("time not implemented on this platform"), а непойманная паника
+// в wasm убивает инстанс целиком — вкладка виснет. Тот же приём уже
+// используется в alerts.rs для дедупликации тостов.
 static SELF_MUTE: std::sync::LazyLock<Mutex<HashMap<String, f64>>> =
     std::sync::LazyLock::new(|| Mutex::new(HashMap::new()));
 const SELF_MUTE_WINDOW_MS: f64 = 3000.0;
+/// Загрузка архива задачи компилирует чекер и может идти дольше обычного окна.
+const PROBLEM_UPLOAD_WINDOW_MS: f64 = 120_000.0;
+/// После ответа ws-эхо приходит почти сразу; этого окна хватает с запасом.
+const PROBLEM_ECHO_WINDOW_MS: f64 = 10_000.0;
 
 /// Отметить собственное изменение в ленте `feed` (`"users"`, `"problems"`).
 pub fn mark_self_action(feed: &str) {
+    mark_self_action_for(feed, SELF_MUTE_WINDOW_MS);
+}
+
+fn mark_self_action_for(feed: &str, window_ms: f64) {
     if let Ok(mut map) = SELF_MUTE.lock() {
-        map.insert(feed.to_string(), js_sys::Date::now());
+        map.insert(feed.to_string(), js_sys::Date::now() + window_ms);
     }
+}
+
+fn clear_self_action(feed: &str) {
+    if let Ok(mut map) = SELF_MUTE.lock() {
+        map.remove(feed);
+    }
+}
+
+/// Задача загружается/обновляется: чекер компилируется на сервере, поэтому
+/// держим метку живой до ответа, а не только 3 секунды от начала запроса.
+pub fn begin_problem_action() {
+    mark_self_action_for("problems", PROBLEM_UPLOAD_WINDOW_MS);
+}
+
+/// Запрос завершился успешно: локальный тост показан, ждём короткое ws-эхо.
+pub fn finish_problem_action() {
+    mark_self_action_for("problems", PROBLEM_ECHO_WINDOW_MS);
+}
+
+/// Запрос завершился ошибкой — снимаем метку, чтобы не глушить чужие события.
+pub fn cancel_problem_action() {
+    clear_self_action("problems");
 }
 
 /// Это эхо собственного недавнего изменения?
@@ -139,7 +169,7 @@ pub fn is_self_echo(feed: &str) -> bool {
         .lock()
         .ok()
         .and_then(|map| map.get(feed).copied())
-        .is_some_and(|t| js_sys::Date::now() - t < SELF_MUTE_WINDOW_MS)
+        .is_some_and(|until| js_sys::Date::now() < until)
 }
 
 /// Закрывает все подписки разом — при выходе и удалении аккаунта, чтобы

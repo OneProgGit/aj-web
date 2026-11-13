@@ -239,13 +239,14 @@ fn add_problem_button(contest: PublicContestConfig, problems: Vec<PublicProblemC
                                     let token = token.clone();
                                     let spawn_lang = lang.clone();
                                     spawn(async move {
-                                        crate::components::ws::mark_self_action("problems");
+                                        crate::components::ws::begin_problem_action();
                                         let res = api::problems::create_contest_problem(
                                             contest_id, problem_index, bytes, &token,
                                         ).await;
                                         busy.set(false);
                                         match res {
                                             Ok(()) => {
+                                                crate::components::ws::finish_problem_action();
                                                 show_alert(
                                                     AlertKind::Info,
                                                     i18n::tr(
@@ -258,7 +259,10 @@ fn add_problem_button(contest: PublicContestConfig, problems: Vec<PublicProblemC
                                                 archive.set(None);
                                                 load_contest_state(contest_id, 0, false, true).await;
                                             }
-                                            Err(e) => crate::components::compiler_error::show_problem_archive_error(e),
+                                            Err(e) => {
+                                                crate::components::ws::cancel_problem_action();
+                                                crate::components::compiler_error::show_problem_archive_error(e);
+                                            }
                                         }
                                     });
                                 }

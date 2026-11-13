@@ -3,7 +3,7 @@ use dioxus::prelude::*;
 use crate::{
     alerts::{AlertKind, show_alert},
     api::problems::ProblemArchiveError,
-    components::markdown::Markdown,
+    components::markdown::{Markdown, plain_text_code_block},
     i18n,
 };
 
@@ -20,23 +20,6 @@ fn title(lang: &str) -> String {
 
 fn close() {
     *CHECKER_LOG.write() = None;
-}
-
-/// Wraps the log into a fenced code block, choosing a fence longer than any
-/// backtick run inside the log so compiler output cannot terminate it early.
-fn code_block(log: &str) -> String {
-    let mut longest_run = 0;
-    let mut current_run = 0;
-    for ch in log.chars() {
-        if ch == '`' {
-            current_run += 1;
-            longest_run = longest_run.max(current_run);
-        } else {
-            current_run = 0;
-        }
-    }
-    let fence = "`".repeat((longest_run + 1).max(3));
-    format!("{fence}text\n{log}\n{fence}")
 }
 
 /// Shows a checker build failure. An empty compiler log is not worth a modal:
@@ -70,12 +53,7 @@ pub fn CompilerErrorHost() -> Element {
         div { class: "modal modal-open",
             div { class: "modal-box max-w-4xl flex flex-col gap-3",
                 div { class: "flex items-start justify-between gap-3",
-                    div {
-                        h3 { class: "text-lg font-bold", "{title(&lang)}" }
-                        p { class: "text-sm opacity-70 mt-1",
-                            "{i18n::tr(&lang, \"Лог компилятора можно скопировать целиком.\", \"You can copy the whole compiler log.\")}"
-                        }
-                    }
+                    h3 { class: "text-lg font-bold", "{title(&lang)}" }
                     button {
                         class: "btn btn-sm btn-circle btn-ghost",
                         r#type: "button",
@@ -84,32 +62,10 @@ pub fn CompilerErrorHost() -> Element {
                     }
                 }
                 div { class: "md-code-scroll",
-                    Markdown { text: code_block(&log) }
-                }
-                div { class: "modal-action",
-                    button {
-                        class: "btn btn-primary btn-sm",
-                        r#type: "button",
-                        onclick: move |_| close(),
-                        "{i18n::tr(&lang, \"Закрыть\", \"Close\")}"
-                    }
+                    Markdown { text: plain_text_code_block(&log) }
                 }
             }
             div { class: "modal-backdrop", onclick: move |_| close() }
         }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::code_block;
-
-    #[test]
-    fn fence_is_longer_than_backticks_in_log() {
-        let log = "error: expected ```\n  at src/main.rs";
-        let block = code_block(log);
-        assert!(block.starts_with("````text\n"));
-        assert!(block.ends_with("\n````"));
-        assert!(block.contains(log));
     }
 }

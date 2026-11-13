@@ -7,6 +7,25 @@ use super::icon::{Icon, icon_element};
 use crate::alerts::{AlertKind, show_alert};
 use crate::i18n;
 
+/// Wraps arbitrary text into a fenced code block marked as plain text. The
+/// fence is made longer than any backtick run inside `text`, so logs cannot
+/// terminate the block early.
+#[must_use]
+pub(crate) fn plain_text_code_block(text: &str) -> String {
+    let mut longest_run = 0;
+    let mut current_run = 0;
+    for ch in text.chars() {
+        if ch == '`' {
+            current_run += 1;
+            longest_run = longest_run.max(current_run);
+        } else {
+            current_run = 0;
+        }
+    }
+    let fence = "`".repeat((longest_run + 1).max(3));
+    format!("{fence}text\n{text}\n{fence}")
+}
+
 fn render_markdown(text: &str, lang: &str) -> String {
     let mut opts = Options::empty();
     opts.insert(Options::ENABLE_TABLES);
@@ -305,7 +324,16 @@ pub fn MdField(value: Signal<String>, label: String) -> Element {
 
 #[cfg(test)]
 mod tests {
-    use super::render_markdown;
+    use super::{plain_text_code_block, render_markdown};
+
+    #[test]
+    fn plain_text_fence_is_longer_than_backticks_in_log() {
+        let log = "error: expected ```\n  at src/main.rs";
+        let block = plain_text_code_block(log);
+        assert!(block.starts_with("````text\n"));
+        assert!(block.ends_with("\n````"));
+        assert!(block.contains(log));
+    }
 
     #[test]
     fn extensions_survive_sanitizer() {

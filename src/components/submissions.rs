@@ -10,7 +10,7 @@ use super::{
     datetime_text::DateTimeText,
     icon::{Icon, icon_element},
     loading::Loading,
-    markdown::Markdown,
+    markdown::{Markdown, plain_text_code_block},
     user_link::UserLink,
     verdict_badge::VerdictBadge,
 };
@@ -312,7 +312,7 @@ fn SubmissionDetail(props: SubmissionDetailProps) -> Element {
                         p { class: "italic", "{i18n::tr(&lang, \"Лог компилятора пуст\", \"Compiler log is empty\")}" }
                     } else {
                         div { class: "md-code-scroll",
-                            Markdown { text: format!("```\n{compilation_log}\n```") }
+                            Markdown { text: plain_text_code_block(&compilation_log) }
                         }
                     }
                 } else if tab() == 0 {

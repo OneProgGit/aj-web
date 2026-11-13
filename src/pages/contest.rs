@@ -19,92 +19,47 @@ use crate::{
         contest_announcements::ContestAnnouncements, contest_leaderboard::ContestLeaderboard,
         contest_questions::ContestQuestions,
     },
+    query::{ContestQuery, ContestTab},
     state::STATE,
 };
 
-fn tab_from_url() -> u8 {
-    let query = web_sys::window()
-        .and_then(|w| w.location().search().ok())
-        .unwrap_or_default();
-    if query.contains("tab=posts") {
-        1
-    } else if query.contains("tab=submissions") {
-        4
-    } else if query.contains("tab=questions") {
-        2
-    } else if query.contains("tab=leaderboard") {
-        3
-    } else {
-        crate::state::load_tab()
-    }
+fn problem_index_for_number(problems: &[PublicProblemConfig], number: Option<usize>) -> usize {
+    number
+        .and_then(|number| {
+            problems
+                .iter()
+                .position(|problem| problem.index + 1 == number as i64)
+        })
+        .unwrap_or(0)
 }
 
-fn tab_to_url(tab: u8) {
-    crate::state::save_tab(tab);
-    let query = match tab {
-        1 => "?tab=posts",
-        4 => "?tab=submissions",
-        2 => "?tab=questions",
-        3 => "?tab=leaderboard",
-        _ => "",
-    };
-    if let Some(window) = web_sys::window() {
-        if let Ok(path) = window.location().pathname() {
-            let url = format!("{path}{query}");
-            if let Ok(history) = window.history() {
-                let _ =
-                    history.replace_state_with_url(&wasm_bindgen::JsValue::NULL, "", Some(&url));
-            }
-        }
-    }
+fn contest_route(contest_id: i64, query: ContestQuery) -> crate::Route {
+    crate::Route::Contest { contest_id, query }
 }
 
 /// Shared problem selector (used in main + submissions tabs).
 fn problem_selector(
     problems: Vec<PublicProblemConfig>,
-    mut selected_problem: Signal<usize>,
-    switching: Signal<bool>,
+    selected_problem: usize,
+    switching: bool,
+    on_select: EventHandler<usize>,
 ) -> Element {
     rsx! {
         select {
             class: "select select-bordered select-sm",
-            value: selected_problem().to_string(),
+            value: selected_problem.to_string(),
             // Пока грузятся посылки новой задачи, селект гасим: иначе можно
             // прыгнуть дальше и получить два конкурирующих запроса, причём
             // показанные посылки будут не той задачи, что выбрана.
-            disabled: switching(),
+            disabled: switching,
             onchange: move |ev| {
                 let idx = ev.value().parse::<usize>().unwrap_or(0);
-                selected_problem.set(idx);
-                let problems = STATE.read().contest_problems.clone();
-                STATE.write().selected_problem_id = problems.get(idx).map(|p| p.id);
-                let token = crate::state::token();
-                let all = STATE.read().all_submissions;
-                let mut switching = switching;
-                switching.set(true);
-                spawn(async move {
-                    let res = match problems.get(idx) {
-                        Some(problem) if all => {
-                            api::problems::get_problem_submissions_all(problem.id, &token).await
-                        }
-                        Some(problem) => {
-                            api::problems::get_problem_submissions_my(problem.id, &token).await
-                        }
-                        None => return,
-                    };
-                    // Сбрасываем до разбора результата, иначе при ошибке
-                    // флаг останется в true и задача «зависнет» на спиннере.
-                    switching.set(false);
-                    match res {
-                        Ok(subs) => STATE.write().submissions = subs,
-                        Err(e) => crate::state::show_error(e),
-                    }
-                });
+                on_select.call(idx);
             },
             for (i, p) in problems.iter().enumerate() {
                 option {
                     value: "{i}",
-                    selected: selected_problem() == i,
+                    selected: selected_problem == i,
                     "#{p.index + 1} {i18n::problem_title(&crate::state::language(), &p.name_ru, &p.name_en)}"
                 }
             }
@@ -118,7 +73,12 @@ fn problem_selector(
 /// Отдельного эндпоинта «создать задачу вне контеста» на сервере нет, поэтому
 /// создание живёт здесь: номер в контесте задаётся степпером, а в запрос уходит
 /// 0-based.
-fn add_problem_button(contest: PublicContestConfig, problems: Vec<PublicProblemConfig>) -> Element {
+fn add_problem_button(
+    contest: PublicContestConfig,
+    problems: Vec<PublicProblemConfig>,
+    problem_number: Option<usize>,
+    all_submissions: bool,
+) -> Element {
     let lang = crate::state::language();
     let mut open = use_signal(|| false);
     let mut archive = use_signal(|| None::<(String, Vec<u8>)>);
@@ -257,7 +217,13 @@ fn add_problem_button(contest: PublicContestConfig, problems: Vec<PublicProblemC
                                                 );
                                                 open.set(false);
                                                 archive.set(None);
-                                                load_contest_state(contest_id, 0, false, true).await;
+                                                load_contest_state(
+                                                    contest_id,
+                                                    problem_number,
+                                                    all_submissions,
+                                                    true,
+                                                )
+                                                .await;
                                             }
                                             Err(e) => {
                                                 crate::components::ws::cancel_problem_action();
@@ -367,7 +333,7 @@ pub fn RetestButton(
 
 async fn load_contest_state(
     contest_id: i64,
-    problem_index: usize,
+    problem_number: Option<usize>,
     all_submissions: bool,
     force_data: bool,
 ) {
@@ -381,6 +347,7 @@ async fn load_contest_state(
     }
 
     let problems = STATE.read().contest_problems.clone();
+    let problem_index = problem_index_for_number(&problems, problem_number);
     // По этому id ws-обработчик перечитывает посылки при событиях о них.
     STATE.write().selected_problem_id = problems.get(problem_index).map(|p| p.id);
     if let Some(problem) = problems.get(problem_index) {
@@ -441,15 +408,11 @@ async fn load_contest_state(
 }
 
 #[component]
-pub fn Contest(contest_id: i64) -> Element {
+pub fn Contest(contest_id: i64, query: ContestQuery) -> Element {
     let lang = crate::state::language();
     let navigator = use_navigator();
-    let selected_problem = use_signal(|| 0usize);
-    // Язык посылок помним между перезагрузками, как и язык интерфейса.
-    let mut language_idx = use_signal(crate::state::load_submit_language);
     let mut solution_bytes = use_signal(|| None::<Vec<u8>>);
     let mut solution_name = use_signal(String::new);
-    let mut paste_mode = use_signal(|| false);
     let mut paste_code = use_signal(String::new);
     let mut loaded = use_signal(|| false);
     // Для какого контеста запущена загрузка: при переходе между контестами
@@ -458,27 +421,33 @@ pub fn Contest(contest_id: i64) -> Element {
     // (иначе каждый ререндер плодил бы задачи -> вис/вылет вкладки).
     let mut started_for = use_signal(|| None::<i64>);
     let mut busy = use_signal(|| false);
-    let mut tab = use_signal(tab_from_url);
     // Идёт загрузка посылок другой задачи: на их месте показываем Loading,
     // иначе видны посылки предыдущей задачи — они относятся к другому
     // фильтру и только сбивают с толку.
     let switching = use_signal(|| false);
+    // Последняя пара (номер задачи, «все посылки»), для которой посылки уже
+    // загружены. Нужна, чтобы переход по истории не делал лишний запрос.
+    let mut last_view = use_signal(|| None::<(Option<usize>, bool)>);
+
+    let tab = query.tab;
+    let paste_mode = query.paste;
+    let language_idx = query
+        .lang
+        .unwrap_or_else(crate::state::load_submit_language)
+        .min(5);
 
     if started_for() != Some(contest_id) {
         started_for.set(Some(contest_id));
         loaded.set(false);
         STATE.write().all_submissions = false;
+        STATE.write().leaderboard_include_unofficial = query.unofficial;
+        let initial_problem = query.problem;
         spawn(async move {
-            load_contest_state(contest_id, 0, false, true).await;
+            load_contest_state(contest_id, initial_problem, false, true).await;
+            last_view.set(Some((initial_problem, false)));
             crate::components::contest_ws::contest_ws(contest_id);
             loaded.set(true);
         });
-    }
-
-    if !loaded() {
-        return rsx! {
-            Loading {}
-        };
     }
 
     let contest = STATE
@@ -487,20 +456,83 @@ pub fn Contest(contest_id: i64) -> Element {
         .iter()
         .find(|c| c.id == contest_id)
         .cloned();
+    let can_manage = contest
+        .as_ref()
+        .is_some_and(|c| STATE.read().can_manage_contest(c));
+
+    // URL — единственный источник выбранной задачи и фильтра посылок.
+    use_effect(use_reactive(
+        &(contest_id, loaded(), query.problem, query.all, can_manage),
+        move |(_contest_id, is_loaded, problem_number, all_requested, can_manage)| {
+            if !is_loaded {
+                return;
+            }
+            let all = all_requested && can_manage;
+            if last_view() == Some((problem_number, all)) {
+                return;
+            }
+            last_view.set(Some((problem_number, all)));
+            STATE.write().all_submissions = all;
+
+            let mut switching = switching;
+            switching.set(true);
+            let token = crate::state::token();
+            spawn(async move {
+                let problems = STATE.read().contest_problems.clone();
+                let idx = problem_index_for_number(&problems, problem_number);
+                STATE.write().selected_problem_id = problems.get(idx).map(|p| p.id);
+                let res = match problems.get(idx) {
+                    Some(problem) if all => {
+                        api::problems::get_problem_submissions_all(problem.id, &token).await
+                    }
+                    Some(problem) => {
+                        api::problems::get_problem_submissions_my(problem.id, &token).await
+                    }
+                    None => Ok(Vec::new()),
+                };
+                // Пока шёл запрос, пользователь мог выбрать другую задачу:
+                // тогда этот ответ уже неактуален.
+                if last_view() != Some((problem_number, all)) {
+                    return;
+                }
+                switching.set(false);
+                match res {
+                    Ok(subs) => STATE.write().submissions = subs,
+                    Err(e) => crate::state::show_error(e),
+                }
+            });
+        },
+    ));
+
+    // Держим глобальный флаг в согласии с URL: по нему ws перечитывает
+    // таблицу лидеров, когда приходит событие о посылке.
+    use_effect(use_reactive(
+        &(loaded(), query.unofficial),
+        move |(is_loaded, unofficial)| {
+            if is_loaded {
+                STATE.write().leaderboard_include_unofficial = unofficial;
+            }
+        },
+    ));
+
+    if !loaded() {
+        return rsx! {
+            Loading {}
+        };
+    }
+
     let problems = STATE.read().contest_problems.clone();
     let submissions = STATE.read().submissions.clone();
     let posts_count = STATE.read().posts.len();
     let questions = STATE.read().questions.clone();
     let questions_count = questions.len();
     let questions_answered = questions.iter().filter(|q| !q.answer.is_empty()).count();
-    let can_manage = contest
-        .as_ref()
-        .is_some_and(|c| STATE.read().can_manage_contest(c));
-
-    let selected = problems.get(selected_problem()).cloned();
+    let selected_problem_idx = problem_index_for_number(&problems, query.problem);
+    let selected = problems.get(selected_problem_idx).cloned();
     let can_retest = selected
         .as_ref()
         .is_some_and(|p| STATE.read().can_manage_problem(p));
+    let all_submissions = query.all && can_manage;
 
     let announcements_label = i18n::tr(
         &lang,
@@ -522,11 +554,27 @@ pub fn Contest(contest_id: i64) -> Element {
         i18n::tr(&lang, "выбрать файл", "pick file")
     };
 
-    let paste_mode_label = if paste_mode() {
+    let paste_mode_label = if paste_mode {
         i18n::tr(&lang, "файл", "file")
     } else {
         i18n::tr(&lang, "текст", "text")
     };
+
+    let on_problem_select = EventHandler::new(move |idx: usize| {
+        let problems = STATE.read().contest_problems.clone();
+        if let Some(problem) = problems.get(idx) {
+            STATE.write().selected_problem_id = Some(problem.id);
+            let mut next = query;
+            next.problem = Some((problem.index + 1) as usize);
+            let _ = navigator.replace(contest_route(contest_id, next));
+        }
+    });
+    let on_all_submissions = EventHandler::new(move |checked: bool| {
+        STATE.write().all_submissions = checked;
+        let mut next = query;
+        next.all = checked;
+        let _ = navigator.replace(contest_route(contest_id, next));
+    });
 
     rsx! {
         div { class: "flex flex-col gap-4 max-w-7xl mx-auto w-full contest-page", style: "height: calc(100vh - 12rem); height: calc(100dvh - 12rem); min-height: 28rem;",
@@ -540,49 +588,78 @@ pub fn Contest(contest_id: i64) -> Element {
 
                 div { class: "tabs tabs-lift w-fit",
                     button {
-                        class: if tab() == 0 { "tab gap-3 tab-active" } else { "tab gap-3" },
-                        onclick: move |_| { tab.set(0); tab_to_url(0); },
+                        class: if tab == ContestTab::Main { "tab gap-3 tab-active" } else { "tab gap-3" },
+                        onclick: move |_| {
+                            let mut next = query;
+                            next.tab = ContestTab::Main;
+                            let _ = navigator.replace(contest_route(contest_id, next));
+                        },
                         {icon_element(Icon::Home, 16)}
                         span { "{i18n::tr(&lang, \"главная\", \"main\")}" }
                     }
                     button {
-                        class: if tab() == 4 { "tab gap-3 tab-active" } else { "tab gap-3" },
-                        onclick: move |_| { tab.set(4); tab_to_url(4); },
+                        class: if tab == ContestTab::Submissions { "tab gap-3 tab-active" } else { "tab gap-3" },
+                        onclick: move |_| {
+                            let mut next = query;
+                            next.tab = ContestTab::Submissions;
+                            let _ = navigator.replace(contest_route(contest_id, next));
+                        },
                         {icon_element(Icon::PaperPlane, 16)}
                         span { "{i18n::tr(&lang, \"посылки\", \"submissions\")}" }
                     }
                     button {
-                        class: if tab() == 1 { "tab gap-3 tab-active" } else { "tab gap-3" },
-                        onclick: move |_| { tab.set(1); tab_to_url(1); },
+                        class: if tab == ContestTab::Posts { "tab gap-3 tab-active" } else { "tab gap-3" },
+                        onclick: move |_| {
+                            let mut next = query;
+                            next.tab = ContestTab::Posts;
+                            let _ = navigator.replace(contest_route(contest_id, next));
+                        },
                         {icon_element(Icon::FileText, 16)}
                         span { "{announcements_label}" }
                     }
                     button {
-                        class: if tab() == 2 { "tab gap-3 tab-active" } else { "tab gap-3" },
-                        onclick: move |_| { tab.set(2); tab_to_url(2); },
+                        class: if tab == ContestTab::Questions { "tab gap-3 tab-active" } else { "tab gap-3" },
+                        onclick: move |_| {
+                            let mut next = query;
+                            next.tab = ContestTab::Questions;
+                            let _ = navigator.replace(contest_route(contest_id, next));
+                        },
                         {icon_element(Icon::QuestionMark, 16)}
                         span { "{questions_label}" }
                     }
                     button {
-                        class: if tab() == 3 { "tab gap-3 tab-active" } else { "tab gap-3" },
-                        onclick: move |_| { tab.set(3); tab_to_url(3); },
+                        class: if tab == ContestTab::Leaderboard { "tab gap-3 tab-active" } else { "tab gap-3" },
+                        onclick: move |_| {
+                            let mut next = query;
+                            next.tab = ContestTab::Leaderboard;
+                            let _ = navigator.replace(contest_route(contest_id, next));
+                        },
                         {icon_element(Icon::Person, 16)}
                         span { "{i18n::tr(&lang, \"таблица лидеров\", \"leaderboard\")}" }
                     }
                 }
             }
 
-            if tab() == 1 {
+            if tab == ContestTab::Posts {
                 ContestAnnouncements { contest_id: contest_id }
-            } else if tab() == 2 {
+            } else if tab == ContestTab::Questions {
                 ContestQuestions { contest_id: contest_id }
-            } else if tab() == 3 {
-                ContestLeaderboard { contest_id: contest_id }
-            } else if tab() == 4 {
+            } else if tab == ContestTab::Leaderboard {
+                ContestLeaderboard {
+                    contest_id,
+                    include_unofficial: query.unofficial,
+                    on_toggle: move |value| {
+                        STATE.write().leaderboard_include_unofficial = value;
+                        let mut next = query;
+                        next.unofficial = value;
+                        let _ = navigator.replace(contest_route(contest_id, next));
+                    },
+                }
+            } else if tab == ContestTab::Submissions {
                 if let Some(contest) = &contest {
                     if let Some(problem) = &selected {
                         div { class: "flex flex-wrap gap-4 items-center",
-                            {problem_selector(problems.clone(), selected_problem, switching)}
+                            {problem_selector(problems.clone(), selected_problem_idx, switching(), on_problem_select)}
                             RetestButton {
                                 problem_id: selected.as_ref().map(|p| p.id),
                                 problem_index: selected.as_ref().map(|p| p.index + 1),
@@ -593,11 +670,13 @@ pub fn Contest(contest_id: i64) -> Element {
                         div { class: "flex flex-wrap gap-4 items-center min-h-0",
                         select {
                             class: "select select-bordered select-sm",
-                            value: language_idx().to_string(),
+                            value: language_idx.to_string(),
                             onchange: move |ev| {
                                 let idx = ev.value().parse::<usize>().unwrap_or(0);
-                                language_idx.set(idx);
                                 crate::state::save_submit_language(idx);
+                                let mut next = query;
+                                next.lang = Some(idx);
+                                let _ = navigator.replace(contest_route(contest_id, next));
                             },
                             option { value: "0", "Rust" }
                             option { value: "1", "C" }
@@ -609,11 +688,15 @@ pub fn Contest(contest_id: i64) -> Element {
 
                         button {
                             class: "btn btn-ghost btn-sm gap-1",
-                            onclick: move |_| paste_mode.set(!paste_mode()),
-                            {icon_element(if paste_mode() { Icon::Upload } else { Icon::Pencil }, 16)}
+                            onclick: move |_| {
+                                let mut next = query;
+                                next.paste = !next.paste;
+                                let _ = navigator.replace(contest_route(contest_id, next));
+                            },
+                            {icon_element(if paste_mode { Icon::Upload } else { Icon::Pencil }, 16)}
                             span { "{paste_mode_label}" }
                         }
-                        if !paste_mode() {
+                        if !paste_mode {
                             label { class: "btn btn-ghost btn-sm gap-1 relative overflow-hidden",
                                 {icon_element(Icon::Upload, 16)}
                                 span { "{pick_label}" }
@@ -651,7 +734,7 @@ pub fn Contest(contest_id: i64) -> Element {
                         }
                         }
 
-                        if paste_mode() {
+                        if paste_mode {
                             textarea {
                                 class: "textarea textarea-bordered w-full font-mono",
                                 rows: "8",
@@ -664,7 +747,7 @@ pub fn Contest(contest_id: i64) -> Element {
                         button {
                             class: "btn btn-primary btn-sm gap-1",
                             disabled: busy()
-                                || if paste_mode() {
+                                || if paste_mode {
                                     paste_code().trim().is_empty()
                                 } else {
                                     solution_bytes().is_none()
@@ -675,7 +758,7 @@ pub fn Contest(contest_id: i64) -> Element {
                                 let problem_id = selected.as_ref().map(|p| p.id);
                                 move |_| {
                                     let Some(problem_id) = problem_id else { return; };
-                                    let bytes = if paste_mode() {
+                                    let bytes = if paste_mode {
                                         let code = paste_code();
                                         if code.trim().is_empty() {
                                             return;
@@ -689,7 +772,7 @@ pub fn Contest(contest_id: i64) -> Element {
                                         return;
                                     }
                                     busy.set(true);
-                                    let language = match language_idx() {
+                                    let language = match language_idx {
                                         0 => Language::Rust,
                                         1 => Language::C,
                                         2 => Language::Cpp,
@@ -697,15 +780,19 @@ pub fn Contest(contest_id: i64) -> Element {
                                         4 => Language::Python,
                                         _ => Language::FreePascal,
                                     };
-                                    let idx = selected_problem();
                                     let token = token.clone();
                                     spawn(async move {
                                         match api::problems::submit_solution(contest_id, problem_id, language, bytes, &token).await {
                                             Ok(id) => {
                                                 busy.set(false);
                                                 show_alert(AlertKind::Info, i18n::tr(&crate::state::language(), &format!("Посылка #{id} отправлена"), &format!("Submission #{id} sent")));
-                                                let all = STATE.read().all_submissions;
-                                                load_contest_state(contest_id, idx, all, false).await;
+                                                load_contest_state(
+                                                    contest_id,
+                                                    query.problem,
+                                                    all_submissions,
+                                                    false,
+                                                )
+                                                .await;
                                             }
                                             Err(e) => {
                                                 busy.set(false);
@@ -729,6 +816,9 @@ pub fn Contest(contest_id: i64) -> Element {
                                         contest_hide_solutions: contest.solutions_hidden,
                                         contest_can_manage: can_manage,
                                         all_submissions_allowed: can_manage,
+                                        all_submissions,
+                                        all_submissions_loading: switching(),
+                                        on_all_submissions_change: on_all_submissions,
                                         on_changed: move |_| {},
                                     }
                                 }
@@ -769,14 +859,19 @@ pub fn Contest(contest_id: i64) -> Element {
                         // должно: общий контейнер это grid на две колонки,
                         // и лишний div встал бы третьей ячейкой.
                         div { class: "flex flex-wrap gap-4 items-center",
-                            {problem_selector(problems.clone(), selected_problem, switching)}
+                            {problem_selector(problems.clone(), selected_problem_idx, switching(), on_problem_select)}
                             RetestButton {
                                 problem_id: selected.as_ref().map(|p| p.id),
                                 problem_index: selected.as_ref().map(|p| p.index + 1),
                                 can_manage: can_retest,
                                 busy,
                             }
-                            {add_problem_button(contest.clone(), problems.clone())}
+                            {add_problem_button(
+                                contest.clone(),
+                                problems.clone(),
+                                query.problem,
+                                all_submissions,
+                            )}
                         }
                     }
                     if let Some(problem) = &selected {

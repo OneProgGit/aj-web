@@ -284,26 +284,6 @@ pub fn load_language() -> String {
         .unwrap_or_else(|| "ru".to_string())
 }
 
-const TAB_KEY: &str = "aj_web_tab";
-
-pub fn save_tab(tab: u8) {
-    let window = web_sys::window();
-    let Some(storage) = window.and_then(|w| w.local_storage().ok().flatten()) else {
-        return;
-    };
-    let _ = storage.set_item(TAB_KEY, &tab.to_string());
-}
-
-pub fn load_tab() -> u8 {
-    let window = web_sys::window();
-    window
-        .and_then(|w| w.local_storage().ok().flatten())
-        .and_then(|storage| storage.get_item(TAB_KEY).ok().flatten())
-        .and_then(|v| v.parse::<u8>().ok())
-        .filter(|v| *v <= 4)
-        .unwrap_or(0)
-}
-
 const INTENDED_PATH_KEY: &str = "aj_web_intended_path";
 
 /// Запомнить адрес, на который пользователь шёл по ссылке, но был отправлен

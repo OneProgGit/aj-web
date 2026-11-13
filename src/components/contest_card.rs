@@ -3,6 +3,7 @@ use dioxus::prelude::*;
 use crate::{
     api, i18n,
     models::{DeletionRequest, contests::PublicContestConfig},
+    query::ContestQuery,
     state::{ContestStatus, STATE, contest_status},
 };
 
@@ -265,7 +266,10 @@ pub fn ContestCard(props: ContestCardProps) -> Element {
                         button {
                             class: "btn btn-neutral btn-sm gap-1",
                             onclick: {
-                                move |_| { let _ = navigator.push(crate::Route::Contest { contest_id: contest.id }); }
+                                move |_| { let _ = navigator.push(crate::Route::Contest {
+                                    contest_id: contest.id,
+                                    query: ContestQuery::default(),
+                                }); }
                             },
                             {icon_element(Icon::Enter, 16)}
                             span { "{i18n::tr(&lang, \"войти\", \"enter\")}" }

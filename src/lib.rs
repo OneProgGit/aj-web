@@ -6,6 +6,7 @@ mod components;
 mod i18n;
 mod models;
 mod pages;
+mod query;
 mod state;
 
 use dioxus::prelude::*;
@@ -23,6 +24,7 @@ use crate::{
         register::Register, user_private_profile::UserPrivateProfile, user_profile::UserProfile,
         users::Users, welcome::Welcome,
     },
+    query::{ContestQuery, ProblemsQuery},
     state::STATE,
 };
 
@@ -37,10 +39,13 @@ enum Route {
     Register {},
     #[route("/home")]
     Home {},
-    #[route("/contest/:contest_id")]
-    Contest { contest_id: i64 },
-    #[route("/problems")]
-    Problems {},
+    #[route("/contest/:contest_id?:..query")]
+    Contest {
+        contest_id: i64,
+        query: ContestQuery,
+    },
+    #[route("/problems?:..query")]
+    Problems { query: ProblemsQuery },
     #[route("/users")]
     Users {},
     #[route("/account")]
@@ -95,12 +100,12 @@ fn GuardLayout() -> Element {
         Route::Login {} => i18n::tr(&lang, "Вход — ada-judge", "Login — ada-judge"),
         Route::Register {} => i18n::tr(&lang, "Регистрация — ada-judge", "Register — ada-judge"),
         Route::Home {} => i18n::tr(&lang, "Контесты — ada-judge", "Contests — ada-judge"),
-        Route::Contest { contest_id } => i18n::tr(
+        Route::Contest { contest_id, .. } => i18n::tr(
             &lang,
             &format!("Контест #{contest_id} — ada-judge"),
             &format!("Contest #{contest_id} — ada-judge"),
         ),
-        Route::Problems {} => i18n::tr(&lang, "Задачи — ada-judge", "Problems — ada-judge"),
+        Route::Problems { .. } => i18n::tr(&lang, "Задачи — ada-judge", "Problems — ada-judge"),
         Route::Users {} => i18n::tr(&lang, "Пользователи — ada-judge", "Users — ada-judge"),
         Route::Account {} | Route::UserProfile { .. } | Route::UserPrivateProfile { .. } => {
             i18n::tr(&lang, "Профиль — ada-judge", "Profile — ada-judge")
@@ -151,8 +156,8 @@ fn GuardLayout() -> Element {
                         }
                         if STATE.read().is_admin() {
                             Link {
-                                to: Route::Problems {},
-                                class: if matches!(&location, Route::Problems {}) { "tab gap-2 tab-active" } else { "tab gap-2" },
+                                to: Route::Problems { query: ProblemsQuery::default() },
+                                class: if matches!(&location, Route::Problems { .. }) { "tab gap-2 tab-active" } else { "tab gap-2" },
                                 {crate::components::icon::icon_element(crate::components::icon::Icon::Reader, 16)}
                                 span { "{i18n::tr(&lang, \"задачи\", \"problems\")}" }
                             }
@@ -327,5 +332,47 @@ pub fn App() -> Element {
         }
         AlertHost {}
         CompilerErrorHost {}
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{ContestQuery, ProblemsQuery, Route};
+    use crate::query::ContestTab;
+
+    #[test]
+    fn contest_route_round_trips_query() {
+        let route = Route::Contest {
+            contest_id: 7,
+            query: ContestQuery {
+                tab: ContestTab::Submissions,
+                problem: Some(3),
+                all: true,
+                ..ContestQuery::default()
+            },
+        };
+        assert_eq!(
+            route.to_string(),
+            "/contest/7?tab=submissions&problem=3&all=1"
+        );
+        assert_eq!(route.to_string().parse::<Route>().unwrap(), route);
+    }
+
+    #[test]
+    fn contest_route_has_canonical_default_query() {
+        let route = Route::Contest {
+            contest_id: 1,
+            query: ContestQuery::default(),
+        };
+        assert_eq!(route.to_string(), "/contest/1?tab=main");
+    }
+
+    #[test]
+    fn problems_route_round_trips_query() {
+        let route = Route::Problems {
+            query: ProblemsQuery { all: true },
+        };
+        assert_eq!(route.to_string(), "/problems?all=1");
+        assert_eq!(route.to_string().parse::<Route>().unwrap(), route);
     }
 }

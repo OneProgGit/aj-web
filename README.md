@@ -90,13 +90,27 @@ lightness and `C` is chroma.
 | `/login`, `/register`   | auth                |
 | `/home`                 | contest list        |
 | `/contest/:contest_id`  | contest with tabs   |
-| `/problems`, `/users`   | lists               |
+| `/problems`             | problems list       |
+| `/users`                | users list          |
 | `/account`              | private profile     |
 | `/user/:user_id`        | public profile      |
 | `/user/:user_id/private`| private profile     |
 
-Contest pages keep the selected tab in `localStorage`; the URL is left untouched,
-so it resets on reload while the tab is restored.
+Contest view state lives in the URL, so links can be copied and the page can be
+reloaded without losing the current view:
+
+| Parameter     | Meaning                                                        |
+| ------------- | -------------------------------------------------------------- |
+| `tab`         | `main`, `submissions`, `posts`, `questions`, `leaderboard`      |
+| `problem`     | 1-based problem number inside the contest                       |
+| `all=1`       | show all submissions instead of only the current user's         |
+| `unofficial=1` | include unofficial entries in the leaderboard                  |
+| `lang=0..5`   | submission language (Rust, C, C++, Go, Python, Pascal)          |
+| `paste=1`     | paste solution as text instead of choosing a file              |
+
+The problems page uses `?all=1` for the "all problems" toggle. Defaults are
+spelled out in the URL (`?tab=main`, `?all=0`) so every view has a canonical
+address.
 
 ## Layout
 
@@ -104,6 +118,7 @@ so it resets on reload while the tab is restored.
 - `src/components/` — reusable UI: cards, forms, markdown renderer, icons
 - `src/api/` — REST client (`reqwest`): auth, contests, problems, users
 - `src/models/` — re-exports of `aj-models` plus local types (`DeletionRequest`)
+- `src/query.rs` — typed contest/problems query state stored in the URL
 - `src/state.rs` — global `STATE` signal (data, token, language)
 - `src/i18n.rs` — `tr(lang, "ru", "en")` translation helper
 - `src/alerts.rs` — toast notifications; `state::show_error` swallows 403s,

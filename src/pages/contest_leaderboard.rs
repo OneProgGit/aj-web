@@ -13,11 +13,14 @@ use crate::{
 };
 
 #[component]
-pub fn ContestLeaderboard(contest_id: i64) -> Element {
+pub fn ContestLeaderboard(
+    contest_id: i64,
+    include_unofficial: bool,
+    on_toggle: EventHandler<bool>,
+) -> Element {
     let lang = crate::state::language();
     let mut started_for = use_signal(|| None::<i64>);
     let mut loaded = use_signal(|| false);
-    let mut include_unofficial = use_signal(|| STATE.read().leaderboard_include_unofficial);
     let mut board_for = use_signal(|| None::<(i64, bool)>);
     let mut board_loading = use_signal(|| false);
 
@@ -45,8 +48,8 @@ pub fn ContestLeaderboard(contest_id: i64) -> Element {
         });
     }
 
-    if board_for() != Some((contest_id, include_unofficial())) {
-        let include = include_unofficial();
+    if board_for() != Some((contest_id, include_unofficial)) {
+        let include = include_unofficial;
         board_for.set(Some((contest_id, include)));
         board_loading.set(true);
         spawn(async move {
@@ -60,7 +63,7 @@ pub fn ContestLeaderboard(contest_id: i64) -> Element {
                 Ok(rows) => {
                     // Переключение могло уйти вперёд, пока шёл этот запрос:
                     // тогда ответ уже неактуален.
-                    if STATE.read().leaderboard_include_unofficial == include {
+                    if board_for() == Some((contest_id, include)) {
                         STATE.write().leaderboard = rows;
                     }
                 }
@@ -217,12 +220,8 @@ pub fn ContestLeaderboard(contest_id: i64) -> Element {
                     input {
                         class: "toggle toggle-sm",
                         r#type: "checkbox",
-                        checked: include_unofficial(),
-                        onchange: move |ev| {
-                            let value = ev.checked();
-                            include_unofficial.set(value);
-                            STATE.write().leaderboard_include_unofficial = value;
-                        },
+                        checked: include_unofficial,
+                        onchange: move |ev| on_toggle.call(ev.checked()),
                     }
                     span { "{i18n::tr(&lang, \"показывать неофициальные\", \"show unofficial\")}" }
                 }

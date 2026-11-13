@@ -7,24 +7,26 @@ use crate::{
     api,
     components::{loading::Loading, problem_card::ProblemCard, problems_ws::problems_feed_ws},
     i18n,
+    query::ProblemsQuery,
     state::STATE,
 };
 
 #[component]
-pub fn Problems() -> Element {
+pub fn Problems(query: ProblemsQuery) -> Element {
     let lang = crate::state::language();
-    let mut all_problems = use_signal(|| false);
-    let mut started = use_signal(|| false);
+    let navigator = use_navigator();
     let mut loading = use_signal(|| false);
+    let mut loaded_for = use_signal(|| None::<bool>);
     // Имя контеста по id: показываем его в карточке каждой задачи.
     let mut contest_names = use_signal(HashMap::<i64, String>::new);
     let is_owner = STATE.read().is_owner();
+    let all_problems = query.all && is_owner;
 
-    if !started() {
-        started.set(true);
+    if loaded_for() != Some(all_problems) {
+        loaded_for.set(Some(all_problems));
         loading.set(true);
         STATE.write().problems = Vec::new();
-        let all = all_problems();
+        let all = all_problems;
         let token = crate::state::token();
         // lang уходит в задачу-спавн, рендеру оставляем свою копию.
         let names_lang = lang.clone();
@@ -50,13 +52,16 @@ pub fn Problems() -> Element {
                 api::problems::get_my_problems(&token).await
             };
             match res {
-                Ok(list) => {
+                Ok(list) if loaded_for() == Some(all) => {
                     STATE.write().problems = list;
                     problems_feed_ws();
                 }
-                Err(e) => show_alert(AlertKind::Error, e),
+                Err(e) if loaded_for() == Some(all) => show_alert(AlertKind::Error, e),
+                _ => {}
             }
-            loading.set(false);
+            if loaded_for() == Some(all) {
+                loading.set(false);
+            }
         });
     }
 
@@ -71,30 +76,14 @@ pub fn Problems() -> Element {
                     input {
                         r#type: "checkbox",
                         class: "toggle toggle-sm",
-                        checked: all_problems(),
+                        checked: all_problems,
                         // Гасим на время запроса — иначе два конкурирующих
                         // запроса решат, какой список останется, и значение
                         // тумблера может разойтись с показанным списком.
                         disabled: loading(),
                         onchange: move |ev| {
-                            let new_value = ev.checked();
-                            all_problems.set(new_value);
-                            let token = crate::state::token();
-                            loading.set(true);
-                            spawn(async move {
-                                let res = if new_value {
-                                    api::problems::get_all_problems(&token).await
-                                } else {
-                                    api::problems::get_my_problems(&token).await
-                                };
-                                loading.set(false);
-                                match res {
-                                    Ok(list) => {
-                                        STATE.write().problems = list;
-                                        problems_feed_ws();
-                                    }
-                                    Err(e) => show_alert(AlertKind::Error, e),
-                                }
+                            let _ = navigator.replace(crate::Route::Problems {
+                                query: ProblemsQuery { all: ev.checked() },
                             });
                         },
                     }

@@ -24,6 +24,9 @@ pub struct SubmissionsProps {
     pub contest_hide_solutions: bool,
     pub contest_can_manage: bool,
     pub all_submissions_allowed: bool,
+    pub all_submissions: bool,
+    pub all_submissions_loading: bool,
+    pub on_all_submissions_change: EventHandler<bool>,
     pub on_changed: EventHandler<()>,
 }
 
@@ -34,6 +37,9 @@ impl PartialEq for SubmissionsProps {
             && self.contest_hide_solutions == other.contest_hide_solutions
             && self.contest_can_manage == other.contest_can_manage
             && self.all_submissions_allowed == other.all_submissions_allowed
+            && self.all_submissions == other.all_submissions
+            && self.all_submissions_loading == other.all_submissions_loading
+            && self.on_all_submissions_change == other.on_all_submissions_change
             && self.on_changed == other.on_changed
     }
 }
@@ -45,40 +51,16 @@ pub fn Submissions(props: SubmissionsProps) -> Element {
         contest_hide_solutions,
         contest_can_manage,
         all_submissions_allowed,
+        all_submissions,
+        all_submissions_loading,
+        on_all_submissions_change,
         on_changed,
     } = props;
     let lang = crate::state::language();
-    let mut pending = use_signal(|| false);
     let mut details = use_signal(|| None::<Submission>);
 
     let problem_can_manage = STATE.read().can_manage_problem(&problem);
     let show_download = contest_can_manage || problem_can_manage || !contest_hide_solutions;
-
-    let mut reload = move || {
-        if pending() {
-            return;
-        }
-        pending.set(true);
-        let all = STATE.read().all_submissions;
-        let token = STATE.read().token.clone();
-        let pid = problem.id;
-        let on_changed = on_changed;
-        spawn(async move {
-            let res = if all {
-                api::problems::get_problem_submissions_all(pid, &token).await
-            } else {
-                api::problems::get_problem_submissions_my(pid, &token).await
-            };
-            pending.set(false);
-            match res {
-                Ok(subs) => {
-                    STATE.write().submissions = subs;
-                    on_changed.call(());
-                }
-                Err(e) => crate::alerts::show_alert(crate::alerts::AlertKind::Error, e),
-            }
-        });
-    };
 
     let details_modal = details().map(|submission| {
         let title = i18n::tr(
@@ -114,12 +96,11 @@ pub fn Submissions(props: SubmissionsProps) -> Element {
                                     input {
                                         r#type: "checkbox",
                                         class: "toggle toggle-sm",
-                                        checked: STATE.read().all_submissions,
-                                        disabled: pending(),
+                                        checked: all_submissions,
+                                        disabled: all_submissions_loading,
                                         onchange: move |ev| {
                                             let checked = ev.checked();
-                                            STATE.write().all_submissions = checked;
-                                            reload();
+                                            on_all_submissions_change.call(checked);
                                         },
                                     }
                                     span { class: "label-text", "{i18n::tr(&lang, \"все посылки\", \"all submissions\")}" }
@@ -131,7 +112,7 @@ pub fn Submissions(props: SubmissionsProps) -> Element {
                     // While reloading (the «all submissions» toggle), show
                     // Loading instead of the table: the old submissions are
                     // irrelevant after a mode switch and only confuse.
-                    if pending() {
+                    if all_submissions_loading {
                         Loading {}
                     } else if submissions.is_empty() {
                         p { class: "italic", "{i18n::tr(&lang, \"Посылок пока что нет\", \"No submissions yet\")}" }
